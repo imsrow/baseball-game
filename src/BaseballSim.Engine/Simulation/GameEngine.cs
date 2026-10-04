@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using BaseballSim.Engine.AI;
 using BaseballSim.Engine.Config;
 using BaseballSim.Engine.Control;
 using BaseballSim.Engine.Events;
 using BaseballSim.Engine.Fielding;
+using BaseballSim.Engine.Persistence;
 using BaseballSim.Engine.Pitching;
 using BaseballSim.Engine.Players;
 using BaseballSim.Engine.State;
@@ -28,6 +30,8 @@ namespace BaseballSim.Engine.Simulation
         public GameEngine(GameSetup setup, LeagueConfig config, ulong seed, ControllerSet controllers, IEventSink sink = null)
             : this(GameStateFactory.Create(setup, config, seed), PlayerDirectory.FromSetup(setup), config, controllers, sink)
         {
+            TeamNames[setup.Away.Team.Id] = setup.Away.Team.Name;
+            TeamNames[setup.Home.Team.Id] = setup.Home.Team.Name;
         }
 
         public GameEngine(GameState state, PlayerDirectory players, LeagueConfig config, ControllerSet controllers,
@@ -50,6 +54,58 @@ namespace BaseballSim.Engine.Simulation
         public PlayerDirectory Players => _players;
 
         public PitchPipeline Pipeline => _pipeline;
+
+        /// <summary>팀 ID → 팀 이름 (표시·저장용)</summary>
+        public Dictionary<int, string> TeamNames { get; } = new Dictionary<int, string>();
+
+        // ───────────────────────── 저장 / 불러오기 ─────────────────────────
+
+        /// <summary>현재 경기 전체를 저장 데이터로 (어느 결정 지점에서든 가능)</summary>
+        public byte[] Save()
+        {
+            return GameSaveSerializer.Save(this);
+        }
+
+        /// <summary>
+        /// 저장 데이터로 경기를 이어서 진행할 엔진을 만든다.
+        /// controllers를 주지 않으면 저장 당시 담당 방식(사람/AI)대로 새 컨트롤러를 연결한다.
+        /// </summary>
+        public static GameEngine Load(byte[] data, LeagueConfig config, out SavedGame saved, ControllerSet controllers = null,
+            IEventSink sink = null)
+        {
+            saved = GameSaveSerializer.Load(data, config);
+            var engine = new GameEngine(saved.State, saved.Players, config, controllers ?? ControllersFor(saved.Modes), sink);
+            foreach (KeyValuePair<int, string> pair in saved.TeamNames)
+            {
+                engine.TeamNames[pair.Key] = pair.Value;
+            }
+
+            return engine;
+        }
+
+        private static ControllerSet ControllersFor(ControlModes modes)
+        {
+            ControllerSet set = AiControllers.CreateAllAi();
+            foreach (TeamSide side in new[] { TeamSide.Away, TeamSide.Home })
+            {
+                if (modes.IsHuman(side, DecisionRole.Pitching))
+                {
+                    set.Assign(side, HumanPitchingDecision.Instance);
+                }
+
+                if (modes.IsHuman(side, DecisionRole.Batting))
+                {
+                    set.Assign(side, HumanBattingDecision.Instance);
+                }
+
+                if (modes.IsHuman(side, DecisionRole.Manager))
+                {
+                    set.Assign(side, new HumanManagerDecision { DelegateToAi = modes.ManagerDelegatedToAi[(int)side] });
+                }
+            }
+
+            return set;
+        }
 
         /// <summary>사람 입력 대기 중인 결정 (없으면 null)</summary>
         public PendingDecision Pending => _pending;
@@ -78,6 +134,13 @@ namespace BaseballSim.Engine.Simulation
                 {
                     kind = DecisionKind.OffenseManager;
                     TeamSide side = _state.OffenseSide;
+                    if (_state.Offense.Bench.Count == 0)
+                    {
+                        // 대타·대주자로 쓸 선수가 없으면 결정 지점 생략
+                        ApplyOffenseOrders(ManagerOrders.None(), false);
+                        break;
+                    }
+
                     ManagerContext context = BuildManagerContext(side);
                     Decision<ManagerOrders> decision = Controllers.Manager(side).DecideOffense(context);
                     if (!decision.IsReady)
@@ -85,7 +148,8 @@ namespace BaseballSim.Engine.Simulation
                         return Await(kind, side, context);
                     }
 
-                    ApplyAiOrThrow(ValidateOffenseOrders(decision.Value), () => ApplyOffenseOrders(decision.Value, false));
+                    ManagerOrders orders = ValidOrFallback(side, ValidateOffenseOrders(decision.Value), decision.Value);
+                    ApplyOffenseOrders(orders, false);
                     break;
                 }
 
@@ -100,7 +164,8 @@ namespace BaseballSim.Engine.Simulation
                         return Await(kind, side, context);
                     }
 
-                    ApplyAiOrThrow(ValidateDefenseOrders(decision.Value), () => ApplyDefenseOrders(decision.Value, false));
+                    ManagerOrders orders = ValidOrFallback(side, ValidateDefenseOrders(decision.Value), decision.Value);
+                    ApplyDefenseOrders(orders, false);
                     break;
                 }
 
@@ -108,6 +173,13 @@ namespace BaseballSim.Engine.Simulation
                 {
                     kind = DecisionKind.OffensePrePitch;
                     TeamSide side = _state.OffenseSide;
+                    if (!HasPrePitchOptions())
+                    {
+                        // 도루할 주자도 없고 번트할 카운트도 아니면 결정 지점 생략
+                        ApplyPrePitchOrders(ManagerOrders.None());
+                        break;
+                    }
+
                     ManagerContext context = BuildManagerContext(side);
                     Decision<ManagerOrders> decision = Controllers.Manager(side).DecidePrePitch(context);
                     if (!decision.IsReady)
@@ -115,7 +187,7 @@ namespace BaseballSim.Engine.Simulation
                         return Await(kind, side, context);
                     }
 
-                    ApplyAiOrThrow(ValidatePrePitchOrders(decision.Value), () => ApplyPrePitchOrders(decision.Value));
+                    ApplyPrePitchOrders(ValidOrFallback(side, ValidatePrePitchOrders(decision.Value), decision.Value));
                     break;
                 }
 
@@ -187,6 +259,35 @@ namespace BaseballSim.Engine.Simulation
             }
         }
 
+        /// <summary>
+        /// 사람 담당 역할도 이 구간만 AI가 대행해 멈춤 조건까지 진행한다. 끝나면 원래 담당자로 되돌린다.
+        /// 입력 대기 중에 호출하면 그 결정부터 AI가 이어받는다.
+        /// </summary>
+        public RunResult SimulateUntil(IStopCondition stop)
+        {
+            ControllerSet original = Controllers.Clone();
+            foreach (TeamSide side in new[] { TeamSide.Away, TeamSide.Home })
+            {
+                foreach (DecisionRole role in new[] { DecisionRole.Pitching, DecisionRole.Batting, DecisionRole.Manager })
+                {
+                    if (Controllers.IsHuman(side, role))
+                    {
+                        AiControllers.AssignAi(Controllers, side, role);
+                    }
+                }
+            }
+
+            try
+            {
+                _pending = null;
+                return RunUntil(stop);
+            }
+            finally
+            {
+                Controllers.CopyFrom(original);
+            }
+        }
+
         // ───────────────────────── 사람 입력 ─────────────────────────
 
         public SubmitResult Submit(PitchCall call)
@@ -247,6 +348,12 @@ namespace BaseballSim.Engine.Simulation
                 return SubmitResult.Reject(error);
             }
 
+            ManagerContext asked = _pending.ManagerContext;
+            if (orders.IsEmpty && Controllers.Manager(_pending.Side) is HumanManagerDecision human)
+            {
+                human.OnSuggestionDeclined(asked);
+            }
+
             apply();
             _pending = null;
             return SubmitResult.Accept();
@@ -266,6 +373,34 @@ namespace BaseballSim.Engine.Simulation
         {
             _pending = new PendingDecision(kind, side, context);
             return new StepResult(StepStatus.AwaitingInput, null, 0);
+        }
+
+        /// <summary>
+        /// 감독 지시 검증. 사람 감독이 미리 걸어둔 지시가 지금 상황에 맞지 않으면 "작전 없음"으로 진행하고,
+        /// AI 지시가 규칙에 어긋나면 버그이므로 예외를 던진다.
+        /// </summary>
+        private ManagerOrders ValidOrFallback(TeamSide side, string error, ManagerOrders orders)
+        {
+            if (error == null)
+            {
+                return orders;
+            }
+
+            if (Controllers.IsHuman(side, DecisionRole.Manager))
+            {
+                return ManagerOrders.None();
+            }
+
+            throw new InvalidOperationException("AI 결정이 규칙에 맞지 않습니다: " + error);
+        }
+
+        /// <summary>투구 전 작전이 의미 있는지: 도루 가능한 주자 또는 번트 가능한 카운트</summary>
+        private bool HasPrePitchOptions()
+        {
+            bool canSteal = (_state.Bases[0] != null && _state.Bases[1] == null)
+                || (_state.Bases[1] != null && _state.Bases[2] == null);
+            bool canBunt = _state.Strikes < _config.Rules.StrikesForStrikeout - 1;
+            return canSteal || canBunt;
         }
 
         private static void ApplyAiOrThrow(string error, Action apply)

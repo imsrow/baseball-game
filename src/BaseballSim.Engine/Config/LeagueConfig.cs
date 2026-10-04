@@ -26,6 +26,7 @@ namespace BaseballSim.Engine.Config
         public ManagerAiConfig ManagerAi { get; set; } = new ManagerAiConfig();
         public InputModifierConfig InputModifier { get; set; } = new InputModifierConfig();
         public SeasonConfig Season { get; set; } = new SeasonConfig();
+        public InteractionConfig Interaction { get; set; } = new InteractionConfig();
 
         public static LeagueConfig CreateDefault()
         {

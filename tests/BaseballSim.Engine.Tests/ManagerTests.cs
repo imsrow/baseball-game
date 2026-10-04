@@ -23,7 +23,7 @@ namespace BaseballSim.Engine.Tests
         private GameEngine EngineAt(DecisionKind kind, TeamSide humanSide, ulong seed = 1, GameSetup setup = null)
         {
             ControllerSet controllers = AiControllers.CreateAllAi();
-            controllers.Assign(humanSide, HumanManagerDecision.Instance);
+            controllers.Assign(humanSide, new PromptingManager());
             var engine = new GameEngine(setup ?? TestData.AverageGame(), _config, seed, controllers);
             while (true)
             {

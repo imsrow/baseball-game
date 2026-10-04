@@ -55,6 +55,14 @@ namespace BaseballSim.Engine.Control
             }
         }
 
+        /// <summary>다른 세트의 지정을 그대로 복사 (구간 시뮬 후 원래 담당자 복원용)</summary>
+        public void CopyFrom(ControllerSet other)
+        {
+            Array.Copy(other._pitching, _pitching, 2);
+            Array.Copy(other._batting, _batting, 2);
+            Array.Copy(other._manager, _manager, 2);
+        }
+
         public ControllerSet Clone()
         {
             var copy = new ControllerSet();

@@ -137,7 +137,7 @@ namespace BaseballSim.Engine.Tests
         private GameEngine EngineAtPrePitch(ulong seed)
         {
             ControllerSet controllers = AiControllers.CreateAllAi();
-            controllers.Assign(TeamSide.Away, HumanManagerDecision.Instance);
+            controllers.Assign(TeamSide.Away, new PromptingManager());
             controllers.Assign(TeamSide.Away, HumanBattingDecision.Instance);
             var engine = new GameEngine(TestData.AverageGame(), _config, seed, controllers);
             while (true)
