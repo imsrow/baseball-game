@@ -18,5 +18,8 @@ namespace BaseballSim.Engine.Simulation
         Swing = 3,
 
         GameOver = 4,
+
+        /// <summary>투구 전: 공격 감독 작전 (도루·번트 사인)</summary>
+        OffensePrePitch = 5,
     }
 }

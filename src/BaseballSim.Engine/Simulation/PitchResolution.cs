@@ -11,6 +11,9 @@ namespace BaseballSim.Engine.Simulation
     {
         public PitchResult Result { get; set; }
 
+        /// <summary>번트 시도였는지</summary>
+        public bool IsBunt { get; set; }
+
         /// <summary>인플레이일 때 타구</summary>
         public BattedBall BattedBall { get; set; }
 

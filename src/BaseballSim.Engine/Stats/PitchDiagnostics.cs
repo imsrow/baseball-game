@@ -28,6 +28,15 @@ namespace BaseballSim.Engine.Stats
         public double ExitVelocitySumKmh { get; set; }
         public double LaunchAngleSumDeg { get; set; }
         public long Errors { get; set; }
+        public long StealAttempts { get; set; }
+        public long StolenBases { get; set; }
+        public long WildPitches { get; set; }
+        public long PassedBalls { get; set; }
+
+        /// <summary>번트로 끝난 타석 수 (페어 번트)</summary>
+        public long BuntsInPlay { get; set; }
+
+        public long DroppedThirdStrikeReaches { get; set; }
         public long Runs { get; set; }
 
         public double ZoneRate => Ratio(InZone, Pitches);

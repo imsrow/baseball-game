@@ -51,6 +51,7 @@ namespace BaseballSim.Engine.Events
 
         // ── 결과 ──
         public bool Swung { get; set; }
+        public bool IsBunt { get; set; }
         public PitchResult Result { get; set; }
         public BattedBallData BattedBall { get; set; }
 
@@ -58,6 +59,20 @@ namespace BaseballSim.Engine.Events
         public PlateAppearanceOutcome? PlateAppearanceOutcome { get; set; }
 
         public List<RunnerMovement> RunnerMovements { get; set; } = new List<RunnerMovement>();
+
+        // ── 투구 중 주루 ──
+
+        /// <summary>도루 시도 출발 베이스 (0이면 시도 없음)</summary>
+        public int StealFromBase { get; set; }
+        public int StealRunnerId { get; set; } = -1;
+        public bool StealSucceeded { get; set; }
+        public bool IsWildPitch { get; set; }
+        public bool IsPassedBall { get; set; }
+
+        /// <summary>포수가 세 번째 스트라이크를 놓쳐 타자가 뛸 수 있었음 (낫아웃)</summary>
+        public bool DroppedThirdStrike { get; set; }
+        public bool BatterReachedOnDroppedThirdStrike { get; set; }
+
         public bool IsError { get; set; }
 
         /// <summary>포스아웃으로 이닝이 끝나 득점이 무효 처리됨</summary>

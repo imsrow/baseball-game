@@ -40,6 +40,12 @@ namespace BaseballSim.Engine.State
 
         public int EventSequence { get; set; }
 
+        /// <summary>이번 투구에 도루를 시도하는 주자의 출발 베이스 (0이면 없음)</summary>
+        public int StealFromBase { get; set; }
+
+        /// <summary>이번 투구 번트 사인</summary>
+        public Control.BuntType BuntSign { get; set; }
+
         /// <summary>Swing 단계에서 타자가 판단할 투구</summary>
         public PitchInFlight CurrentPitch { get; set; }
 

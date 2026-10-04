@@ -18,6 +18,9 @@ namespace BaseballSim.Engine.Config
         public FieldConfig Field { get; set; } = new FieldConfig();
         public FieldingConfig Fielding { get; set; } = new FieldingConfig();
         public BaserunningConfig Baserunning { get; set; } = new BaserunningConfig();
+        public StealConfig Steal { get; set; } = new StealConfig();
+        public PassedBallConfig PassedBall { get; set; } = new PassedBallConfig();
+        public BuntConfig Bunt { get; set; } = new BuntConfig();
         public DefenseConfig Defense { get; set; } = new DefenseConfig();
         public PlatoonConfig Platoon { get; set; } = new PlatoonConfig();
         public ManagerAiConfig ManagerAi { get; set; } = new ManagerAiConfig();

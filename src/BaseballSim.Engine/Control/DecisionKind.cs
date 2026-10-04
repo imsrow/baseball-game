@@ -9,5 +9,8 @@ namespace BaseballSim.Engine.Control
         DefenseManager = 1,
         Pitch = 2,
         Swing = 3,
+
+        /// <summary>투구 전 공격 작전 (도루·번트 사인)</summary>
+        OffensePrePitch = 4,
     }
 }

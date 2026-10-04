@@ -17,6 +17,22 @@ namespace BaseballSim.Engine.Control
 
         public Position Position { get; set; }
 
+        /// <summary>도루: 출발 베이스 (1 또는 2)</summary>
+        public int FromBase { get; set; }
+
+        /// <summary>번트 사인 종류</summary>
+        public BuntType BuntType { get; set; }
+
+        public static ManagerAction Steal(int fromBase)
+        {
+            return new ManagerAction { Type = ManagerActionType.StealAttempt, FromBase = fromBase };
+        }
+
+        public static ManagerAction Bunt(BuntType type)
+        {
+            return new ManagerAction { Type = ManagerActionType.BuntSign, BuntType = type };
+        }
+
         public static ManagerAction PitchingChange(int incomingPitcherId)
         {
             return new ManagerAction

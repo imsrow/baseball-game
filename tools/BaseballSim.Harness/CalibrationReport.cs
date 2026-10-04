@@ -84,6 +84,17 @@ namespace BaseballSim.Harness
             AppendAux(sb, "희생플라이/경기(팀)", results, r => (double)r.Stats.League.SacrificeFlies / r.TeamGames, "0.00", "0.25");
             AppendAux(sb, "실책/경기(팀)", results, r => (double)r.Stats.Diagnostics.Errors / r.TeamGames, "0.00",
                 t.ReferenceErrorsPerTeamGame.ToString("0.00", CultureInfo.InvariantCulture));
+            AppendAux(sb, "도루 시도/경기(팀)", results, r => (double)r.Stats.Diagnostics.StealAttempts / r.TeamGames, "0.00",
+                t.ReferenceStealAttemptsPerTeamGame.ToString("0.00", CultureInfo.InvariantCulture));
+            AppendAux(sb, "도루 성공률", results, r => Rate((int)r.Stats.Diagnostics.StolenBases, (int)r.Stats.Diagnostics.StealAttempts), "P",
+                (t.ReferenceStealSuccessRate * 100).ToString("0", CultureInfo.InvariantCulture) + "%");
+            AppendAux(sb, "희생번트/경기(팀)", results, r => (double)r.Stats.League.SacrificeBunts / r.TeamGames, "0.00",
+                t.ReferenceSacrificeBuntsPerTeamGame.ToString("0.00", CultureInfo.InvariantCulture));
+            AppendAux(sb, "번트 인플레이/경기(팀)", results, r => (double)r.Stats.Diagnostics.BuntsInPlay / r.TeamGames, "0.00", "-");
+            AppendAux(sb, "폭투+포일/경기(팀)", results,
+                r => (double)(r.Stats.Diagnostics.WildPitches + r.Stats.Diagnostics.PassedBalls) / r.TeamGames, "0.00",
+                t.ReferenceWildPitchPassedBallPerTeamGame.ToString("0.00", CultureInfo.InvariantCulture));
+            AppendAux(sb, "낫아웃 출루/경기(팀)", results, r => (double)r.Stats.Diagnostics.DroppedThirdStrikeReaches / r.TeamGames, "0.000", "0.02");
             AppendAux(sb, "투수 교체/경기(팀)", results, r => (double)r.Stats.PitchingChanges / r.TeamGames, "0.00", "3.2");
             AppendAux(sb, "연장 경기 비율", results, r => Rate(r.ExtraInningGames, r.Games), "P", "8%");
             return sb.ToString();

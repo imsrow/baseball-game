@@ -104,6 +104,21 @@ namespace BaseballSim.Engine.Simulation
                     break;
                 }
 
+                case GamePhase.OffensePrePitch:
+                {
+                    kind = DecisionKind.OffensePrePitch;
+                    TeamSide side = _state.OffenseSide;
+                    ManagerContext context = BuildManagerContext(side);
+                    Decision<ManagerOrders> decision = Controllers.Manager(side).DecidePrePitch(context);
+                    if (!decision.IsReady)
+                    {
+                        return Await(kind, side, context);
+                    }
+
+                    ApplyAiOrThrow(ValidatePrePitchOrders(decision.Value), () => ApplyPrePitchOrders(decision.Value));
+                    break;
+                }
+
                 case GamePhase.Pitch:
                 {
                     kind = DecisionKind.Pitch;
@@ -202,28 +217,37 @@ namespace BaseballSim.Engine.Simulation
 
         public SubmitResult Submit(ManagerOrders orders)
         {
-            if (_pending == null
-                || (_pending.Kind != DecisionKind.OffenseManager && _pending.Kind != DecisionKind.DefenseManager))
+            if (_pending == null)
             {
                 return SubmitResult.Reject("감독 결정 대기 중이 아닙니다.");
             }
 
-            bool offense = _pending.Kind == DecisionKind.OffenseManager;
-            string error = offense ? ValidateOffenseOrders(orders) : ValidateDefenseOrders(orders);
+            string error;
+            Action apply;
+            switch (_pending.Kind)
+            {
+                case DecisionKind.OffenseManager:
+                    error = ValidateOffenseOrders(orders);
+                    apply = () => ApplyOffenseOrders(orders, true);
+                    break;
+                case DecisionKind.DefenseManager:
+                    error = ValidateDefenseOrders(orders);
+                    apply = () => ApplyDefenseOrders(orders, true);
+                    break;
+                case DecisionKind.OffensePrePitch:
+                    error = ValidatePrePitchOrders(orders);
+                    apply = () => ApplyPrePitchOrders(orders);
+                    break;
+                default:
+                    return SubmitResult.Reject("감독 결정 대기 중이 아닙니다.");
+            }
+
             if (error != null)
             {
                 return SubmitResult.Reject(error);
             }
 
-            if (offense)
-            {
-                ApplyOffenseOrders(orders, true);
-            }
-            else
-            {
-                ApplyDefenseOrders(orders, true);
-            }
-
+            apply();
             _pending = null;
             return SubmitResult.Accept();
         }
@@ -373,6 +397,77 @@ namespace BaseballSim.Engine.Simulation
                 ChangePitcher(action.IncomingPlayerId, byHuman);
             }
 
+            _state.Phase = GamePhase.OffensePrePitch;
+        }
+
+        private string ValidatePrePitchOrders(ManagerOrders orders)
+        {
+            if (orders == null)
+            {
+                return "지시가 없습니다.";
+            }
+
+            bool steal = false;
+            bool bunt = false;
+            foreach (ManagerAction action in orders.Actions)
+            {
+                switch (action.Type)
+                {
+                    case ManagerActionType.StealAttempt:
+                        if (steal)
+                        {
+                            return "도루는 한 명만 지시할 수 있습니다.";
+                        }
+
+                        if (action.FromBase != 1 && action.FromBase != 2)
+                        {
+                            return "1루 또는 2루 주자만 도루할 수 있습니다.";
+                        }
+
+                        if (_state.Bases[action.FromBase - 1] == null)
+                        {
+                            return action.FromBase + "루에 주자가 없습니다.";
+                        }
+
+                        if (_state.Bases[action.FromBase] != null)
+                        {
+                            return (action.FromBase + 1) + "루가 비어 있지 않습니다.";
+                        }
+
+                        steal = true;
+                        break;
+                    case ManagerActionType.BuntSign:
+                        if (bunt || action.BuntType == BuntType.None)
+                        {
+                            return "번트 사인이 올바르지 않습니다.";
+                        }
+
+                        bunt = true;
+                        break;
+                    default:
+                        return "투구 전에 할 수 없는 지시입니다: " + action.Type;
+                }
+            }
+
+            return null;
+        }
+
+        private void ApplyPrePitchOrders(ManagerOrders orders)
+        {
+            _state.StealFromBase = 0;
+            _state.BuntSign = BuntType.None;
+            foreach (ManagerAction action in orders.Actions)
+            {
+                if (action.Type == ManagerActionType.StealAttempt)
+                {
+                    _state.StealFromBase = action.FromBase;
+                }
+                else if (action.Type == ManagerActionType.BuntSign)
+                {
+                    _state.BuntSign = action.BuntType;
+                }
+            }
+
             _state.Phase = GamePhase.Pitch;
         }
 
@@ -440,26 +535,31 @@ namespace BaseballSim.Engine.Simulation
             PitchInFlight pitch = _state.CurrentPitch;
             TeamGameState offense = _state.Offense;
             TeamGameState defense = _state.Defense;
+            RulesConfig rules = _config.Rules;
             Player pitcher = CurrentPitcher();
             Player batter = _players.Get(_state.CurrentBatterId);
             Player catcher = _players.Get(defense.PlayerIdAt(Position.Catcher));
             Hand hand = batter.BattingHandAgainst(pitcher.Throws);
             bool sameHand = hand == pitcher.Throws;
+            bool firstOccupied = _state.Bases[0] != null;
+            int outsBefore = _state.Outs;
 
             PitchEvent ev = CreatePitchEvent(pitch, batter, pitcher, catcher, hand, action, byHuman);
             PitchResolution resolution = _pipeline.Resolve(pitch, action, batter, hand, sameHand, _state.Strikes, catcher,
                 () => BuildPlaySituation(batter, hand), _state.Random);
             ev.Result = resolution.Result;
+            ev.IsBunt = resolution.IsBunt;
 
             PlateAppearanceOutcome? outcome = null;
+            List<RunnerMovement> moves = null;
             switch (resolution.Result)
             {
                 case PitchResult.Ball:
                     _state.Balls++;
-                    if (_state.Balls >= _config.Rules.BallsForWalk)
+                    if (_state.Balls >= rules.BallsForWalk)
                     {
                         outcome = PlateAppearanceOutcome.Walk;
-                        ApplyRunnerMovements(ev, ForcedAdvances(batter.Id), false, false);
+                        moves = ForcedAdvances(batter.Id);
                     }
 
                     break;
@@ -467,25 +567,30 @@ namespace BaseballSim.Engine.Simulation
                 case PitchResult.CalledStrike:
                 case PitchResult.SwingingStrike:
                     _state.Strikes++;
-                    if (_state.Strikes >= _config.Rules.StrikesForStrikeout)
+                    if (_state.Strikes >= rules.StrikesForStrikeout)
                     {
                         outcome = PlateAppearanceOutcome.Strikeout;
-                        RecordOuts(1);
                     }
 
                     break;
 
                 case PitchResult.Foul:
-                    if (_state.Strikes < _config.Rules.StrikesForStrikeout - 1)
+                    if (_state.Strikes < rules.StrikesForStrikeout - 1)
                     {
                         _state.Strikes++;
+                    }
+                    else if (resolution.IsBunt)
+                    {
+                        // 2스트라이크 번트 파울은 삼진
+                        _state.Strikes++;
+                        outcome = PlateAppearanceOutcome.Strikeout;
                     }
 
                     break;
 
                 case PitchResult.HitByPitch:
                     outcome = PlateAppearanceOutcome.HitByPitch;
-                    ApplyRunnerMovements(ev, ForcedAdvances(batter.Id), false, false);
+                    moves = ForcedAdvances(batter.Id);
                     break;
 
                 case PitchResult.InPlay:
@@ -505,6 +610,16 @@ namespace BaseballSim.Engine.Simulation
                 }
             }
 
+            if (resolution.Result != PitchResult.InPlay)
+            {
+                moves = ResolveNonContactBaserunning(ev, resolution, outcome, moves, batter, pitcher, catcher,
+                    firstOccupied, outsBefore);
+                if (moves != null)
+                {
+                    ApplyRunnerMovements(ev, moves, false, false);
+                }
+            }
+
             if (outcome.HasValue)
             {
                 ev.PlateAppearanceOutcome = outcome.Value;
@@ -513,26 +628,139 @@ namespace BaseballSim.Engine.Simulation
                     offense.Hits++;
                 }
 
-                bool rbiEligible = outcome.Value != PlateAppearanceOutcome.ReachedOnError
-                    && outcome.Value != PlateAppearanceOutcome.GroundedIntoDoublePlay;
-                ev.RunsBattedIn = rbiEligible ? ev.RunsScored : 0;
+                ev.RunsBattedIn = IsRbiEligible(outcome.Value) && !ev.IsWildPitch && !ev.IsPassedBall ? ev.RunsScored : 0;
             }
 
-            ev.OutsAfter = Math.Min(_state.Outs, _config.Rules.OutsPerHalfInning);
+            ev.OutsAfter = Math.Min(_state.Outs, rules.OutsPerHalfInning);
             ev.AwayScoreAfter = _state.AwayScore;
             ev.HomeScoreAfter = _state.HomeScore;
             _state.CurrentPitch = null;
+            _state.StealFromBase = 0;
+            _state.BuntSign = BuntType.None;
             Emit(ev);
 
             if (outcome.HasValue)
             {
                 EndPlateAppearance();
             }
+            else if (_state.Outs >= rules.OutsPerHalfInning)
+            {
+                // 타석 도중 도루 실패로 이닝 종료: 같은 타자가 다음 이닝에 새 타석
+                ResetCountForNewPlateAppearance();
+                EndHalfInning();
+            }
+            else if (IsWalkOff())
+            {
+                _state.Phase = GamePhase.GameOver;
+            }
             else
             {
                 _state.PitchNumberInPlateAppearance++;
-                _state.Phase = GamePhase.Pitch;
+                _state.Phase = GamePhase.OffensePrePitch;
             }
+        }
+
+        /// <summary>
+        /// 공이 인플레이되지 않은 투구의 주루: 폭투·포일(낫아웃 포함), 도루.
+        /// 삼진 아웃 기록도 여기서 한다 (낫아웃 출루면 아웃이 아니다).
+        /// 반환값은 적용할 주자 이동 (없으면 null 또는 전달받은 이동 그대로)
+        /// </summary>
+        private List<RunnerMovement> ResolveNonContactBaserunning(PitchEvent ev, PitchResolution resolution,
+            PlateAppearanceOutcome? outcome, List<RunnerMovement> moves, Player batter, Player pitcher, Player catcher,
+            bool firstOccupied, int outsBefore)
+        {
+            RulesConfig rules = _config.Rules;
+            bool strikeout = outcome == PlateAppearanceOutcome.Strikeout;
+            bool runnersOn = _state.Bases[0] != null || _state.Bases[1] != null || _state.Bases[2] != null;
+            bool missEligible = (resolution.Result == PitchResult.Ball && outcome == null)
+                || resolution.Result == PitchResult.CalledStrike || resolution.Result == PitchResult.SwingingStrike;
+
+            // 포수가 공을 놓침
+            bool missed = false;
+            bool batterReached = false;
+            if (missEligible && (runnersOn || strikeout))
+            {
+                PlateLocation location = _state.CurrentPitch.Executed.Actual;
+                if (_state.Random.NextDouble() < _pipeline.PassedBalls.MissProbability(location, catcher))
+                {
+                    missed = true;
+                    bool wild = _pipeline.PassedBalls.IsWildLocation(location);
+                    ev.IsWildPitch = wild;
+                    ev.IsPassedBall = !wild;
+                    moves = AllRunnersAdvance();
+                    if (strikeout && PassedBallModel.BatterMayRunOnDroppedThirdStrike(firstOccupied, outsBefore, rules.OutsPerHalfInning))
+                    {
+                        ev.DroppedThirdStrike = true;
+                        batterReached = _state.Random.NextDouble()
+                            < _pipeline.PassedBalls.DroppedThirdStrikeReachProbability(batter.Batting);
+                        ev.BatterReachedOnDroppedThirdStrike = batterReached;
+                        if (batterReached)
+                        {
+                            moves.Add(new RunnerMovement(batter.Id, 0, 1, false));
+                        }
+                    }
+                }
+            }
+
+            if (strikeout && !batterReached)
+            {
+                RecordOuts(1);
+            }
+
+            // 도루
+            int from = _state.StealFromBase;
+            if (from > 0 && _state.Bases[from - 1] != null)
+            {
+                BaseRunner runner = _state.Bases[from - 1];
+                bool stealCounts = missEligible && outcome != PlateAppearanceOutcome.Walk;
+                if (missed && stealCounts)
+                {
+                    ev.StealFromBase = from;
+                    ev.StealRunnerId = runner.PlayerId;
+                    ev.StealSucceeded = true;
+                }
+                else if (stealCounts && _state.Outs < rules.OutsPerHalfInning)
+                {
+                    Player runnerPlayer = _players.Get(runner.PlayerId);
+                    double success = _pipeline.Steals.SuccessProbability(runnerPlayer.Batting, from + 1, pitcher.Pitching,
+                        catcher, _state.CurrentPitch.Executed.Type);
+                    bool safe = _state.Random.NextDouble() < success;
+                    ev.StealFromBase = from;
+                    ev.StealRunnerId = runner.PlayerId;
+                    ev.StealSucceeded = safe;
+                    moves = moves ?? new List<RunnerMovement>();
+                    moves.Add(new RunnerMovement(runner.PlayerId, from, from + 1, !safe));
+                    if (!safe)
+                    {
+                        RecordOuts(1);
+                    }
+                }
+            }
+
+            return moves;
+        }
+
+        /// <summary>폭투·포일: 모든 주자 한 베이스 진루</summary>
+        private List<RunnerMovement> AllRunnersAdvance()
+        {
+            var moves = new List<RunnerMovement>();
+            for (int b = 3; b >= 1; b--)
+            {
+                BaseRunner runner = _state.Bases[b - 1];
+                if (runner != null)
+                {
+                    moves.Add(new RunnerMovement(runner.PlayerId, b, b + 1, false));
+                }
+            }
+
+            return moves;
+        }
+
+        private static bool IsRbiEligible(PlateAppearanceOutcome outcome)
+        {
+            return outcome != PlateAppearanceOutcome.ReachedOnError
+                && outcome != PlateAppearanceOutcome.GroundedIntoDoublePlay
+                && outcome != PlateAppearanceOutcome.Strikeout;
         }
 
         private PitchEvent CreatePitchEvent(PitchInFlight pitch, Player batter, Player pitcher, Player catcher, Hand hand,
@@ -740,10 +968,7 @@ namespace BaseballSim.Engine.Simulation
             TeamGameState offense = _state.Offense;
             offense.NextBatterIndex = (offense.NextBatterIndex + 1) % offense.Lineup.Count;
             _state.Defense.CurrentPitcher.BattersFaced++;
-            _state.Balls = 0;
-            _state.Strikes = 0;
-            _state.PlateAppearanceNumber++;
-            _state.PitchNumberInPlateAppearance = 1;
+            ResetCountForNewPlateAppearance();
 
             if (_state.Outs >= _config.Rules.OutsPerHalfInning)
             {
@@ -758,6 +983,14 @@ namespace BaseballSim.Engine.Simulation
             }
 
             _state.Phase = GamePhase.OffenseManager;
+        }
+
+        private void ResetCountForNewPlateAppearance()
+        {
+            _state.Balls = 0;
+            _state.Strikes = 0;
+            _state.PlateAppearanceNumber++;
+            _state.PitchNumberInPlateAppearance = 1;
         }
 
         private bool IsWalkOff()

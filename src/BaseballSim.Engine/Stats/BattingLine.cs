@@ -23,6 +23,8 @@ namespace BaseballSim.Engine.Stats
         public int ReachedOnErrors { get; set; }
         public int Runs { get; set; }
         public int RunsBattedIn { get; set; }
+        public int StolenBases { get; set; }
+        public int CaughtStealing { get; set; }
 
         public int Singles => Hits - Doubles - Triples - HomeRuns;
 

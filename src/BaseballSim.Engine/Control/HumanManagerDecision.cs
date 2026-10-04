@@ -12,6 +12,11 @@ namespace BaseballSim.Engine.Control
             return Decision<ManagerOrders>.Pending;
         }
 
+        public Decision<ManagerOrders> DecidePrePitch(ManagerContext context)
+        {
+            return Decision<ManagerOrders>.Pending;
+        }
+
         public Decision<ManagerOrders> DecideDefense(ManagerContext context)
         {
             return Decision<ManagerOrders>.Pending;

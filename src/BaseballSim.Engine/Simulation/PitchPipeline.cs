@@ -30,6 +30,9 @@ namespace BaseballSim.Engine.Simulation
             Contact = new ContactResolver(config);
             BattedBalls = new BattedBallGenerator(config);
             Fielding = new FieldingResolver(config, Field);
+            Bunts = new BuntResolver(config);
+            Steals = new StealModel(config);
+            PassedBalls = new PassedBallModel(config);
         }
 
         public StrikeZone Zone { get; }
@@ -40,6 +43,9 @@ namespace BaseballSim.Engine.Simulation
         public ContactResolver Contact { get; }
         public BattedBallGenerator BattedBalls { get; }
         public FieldingResolver Fielding { get; }
+        public BuntResolver Bunts { get; }
+        public StealModel Steals { get; }
+        public PassedBallModel PassedBalls { get; }
 
         /// <summary>투구 실행과 인지</summary>
         public PitchInFlight Release(PitchCall call, Player pitcher, double fatigue, Player batter, bool byHuman,
@@ -76,6 +82,11 @@ namespace BaseballSim.Engine.Simulation
                 };
             }
 
+            if (action.Type == BatterActionType.Bunt)
+            {
+                return ResolveBunt(executed, action, batter, situationBuilder, random);
+            }
+
             double contact = Contact.ContactProbability(batter.Batting, executed, strikes, sameHand, action.TimingQuality);
             if (random.NextDouble() >= contact)
             {
@@ -92,6 +103,29 @@ namespace BaseballSim.Engine.Simulation
             return new PitchResolution
             {
                 Result = PitchResult.InPlay,
+                BattedBall = ball,
+                Play = play,
+            };
+        }
+
+        private PitchResolution ResolveBunt(ExecutedPitch executed, BatterAction action, Player batter,
+            PlaySituationBuilder situationBuilder, IRandomSource random)
+        {
+            if (random.NextDouble() >= Bunts.ContactProbability(batter.Batting, executed))
+            {
+                return new PitchResolution { Result = PitchResult.SwingingStrike, IsBunt = true };
+            }
+
+            if (random.NextDouble() < Bunts.FoulProbability(batter.Batting))
+            {
+                return new PitchResolution { Result = PitchResult.Foul, IsBunt = true };
+            }
+
+            PlayResult play = Bunts.ResolveFair(action.BuntType, batter.Batting, situationBuilder(), random, out BattedBall ball);
+            return new PitchResolution
+            {
+                Result = PitchResult.InPlay,
+                IsBunt = true,
                 BattedBall = ball,
                 Play = play,
             };

@@ -86,7 +86,44 @@ namespace BaseballSim.Engine.Stats
                 d.CalledStrikes++;
             }
 
-            if (e.Result == PitchResult.InPlay && e.BattedBall != null)
+            if (e.StealFromBase > 0)
+            {
+                d.StealAttempts++;
+                BattingLine runner = Get(Batters, e.StealRunnerId);
+                if (e.StealSucceeded)
+                {
+                    d.StolenBases++;
+                    runner.StolenBases++;
+                    League.StolenBases++;
+                }
+                else
+                {
+                    runner.CaughtStealing++;
+                    League.CaughtStealing++;
+                }
+            }
+
+            if (e.IsWildPitch)
+            {
+                d.WildPitches++;
+            }
+
+            if (e.IsPassedBall)
+            {
+                d.PassedBalls++;
+            }
+
+            if (e.BatterReachedOnDroppedThirdStrike)
+            {
+                d.DroppedThirdStrikeReaches++;
+            }
+
+            if (e.Result == PitchResult.InPlay && e.IsBunt)
+            {
+                d.BuntsInPlay++;
+            }
+
+            if (e.Result == PitchResult.InPlay && e.BattedBall != null && !e.IsBunt)
             {
                 d.InPlay++;
                 d.BattedBallTypes[(int)e.BattedBall.Type]++;
