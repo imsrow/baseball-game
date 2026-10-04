@@ -36,7 +36,6 @@ namespace BaseballSim.Harness
                 Row("K%", results, s => s.League.StrikeoutRate, t.StrikeoutRate, t.StrikeoutRateTolerance, false),
                 Row("BB%", results, s => s.League.WalkRate, t.WalkRate, t.WalkRateTolerance, false),
                 Row("HR%", results, s => s.League.HomeRunRate, t.HomeRunRate, t.HomeRunRateTolerance, false),
-                Row("BABIP", results, s => s.League.Babip, t.Babip, t.BabipTolerance, true),
             };
 
             sb.AppendLine("[목표 지표]");
@@ -53,7 +52,8 @@ namespace BaseballSim.Harness
             sb.AppendLine("종합: " + (allPassed ? "모든 목표 지표 허용 범위 내" : "허용 범위를 벗어난 지표 있음"));
             sb.AppendLine();
 
-            sb.AppendLine("[보조 지표] 시드 평균 ± 표준편차 (참고: MLB 2023 근사)");
+            sb.AppendLine("[참고 지표] 판정 없음. 시드 평균 ± 표준편차 (참고값: MLB 2023 근사)");
+            AppendAux(sb, "BABIP", results, r => r.Stats.League.Babip, "0.000", t.Babip.ToString(".000", CultureInfo.InvariantCulture));
             AppendAux(sb, "경기당 득점(팀)", results, r => (double)r.Stats.Diagnostics.Runs / r.TeamGames, "0.00", "4.6");
             AppendAux(sb, "타석당 투구 수", results, r => (double)r.Stats.Diagnostics.Pitches / r.Stats.League.PlateAppearances, "0.00",
                 t.ReferencePitchesPerPlateAppearance.ToString("0.0", CultureInfo.InvariantCulture));

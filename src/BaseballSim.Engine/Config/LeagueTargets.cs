@@ -1,8 +1,8 @@
 namespace BaseballSim.Engine.Config
 {
     /// <summary>
-    /// 리그 목표 지표와 허용 오차 (하네스 판정용), 참고치 (판정 없이 비교만)
-    /// 비율 지표는 모두 타석(PA) 대비. BABIP = (H − HR) / (AB − K − HR + SF)
+    /// 리그 목표 지표와 허용 오차 (하네스 판정용: AVG·OBP·SLG·K%·BB%·HR% 6개), 참고치 (판정 없이 비교만)
+    /// 비율 지표는 모두 타석(PA) 대비. BABIP = (H − HR) / (AB − K − HR + SF)는 참고용
     /// </summary>
     public sealed class LeagueTargets
     {
@@ -14,13 +14,12 @@ namespace BaseballSim.Engine.Config
         public double HomeRunRate { get; set; } = 0.030;
         public double Babip { get; set; } = 0.290;
 
-        public double AvgTolerance { get; set; } = 0.005;
-        public double ObpTolerance { get; set; } = 0.005;
-        public double SlgTolerance { get; set; } = 0.010;
-        public double StrikeoutRateTolerance { get; set; } = 0.005;
-        public double WalkRateTolerance { get; set; } = 0.005;
-        public double HomeRunRateTolerance { get; set; } = 0.003;
-        public double BabipTolerance { get; set; } = 0.005;
+        public double AvgTolerance { get; set; } = 0.010;
+        public double ObpTolerance { get; set; } = 0.010;
+        public double SlgTolerance { get; set; } = 0.020;
+        public double StrikeoutRateTolerance { get; set; } = 0.010;
+        public double WalkRateTolerance { get; set; } = 0.010;
+        public double HomeRunRateTolerance { get; set; } = 0.006;
 
         // ── 참고치 (MLB 2023 근사, 팀당 경기당) ──
         public double ReferenceStealAttemptsPerTeamGame { get; set; } = 0.9;

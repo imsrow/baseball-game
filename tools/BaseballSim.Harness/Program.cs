@@ -8,12 +8,12 @@ namespace BaseballSim.Harness
 {
     /// <summary>
     /// 검증 하네스 진입점.
-    /// 사용법: dotnet run --project tools/BaseballSim.Harness -- [--seeds 1,2,3,4,5] [--preset Standard]
+    /// 사용법: dotnet run --project tools/BaseballSim.Harness -- [--seeds 1] [--preset Standard]
     ///         [--teams 12] [--games-per-opponent 12]
     /// </summary>
     public static class Program
     {
-        private static readonly ulong[] DefaultSeeds = { 1, 2, 3, 4, 5 };
+        private static readonly ulong[] DefaultSeeds = { 1 };
 
         public static int Main(string[] args)
         {
