@@ -64,6 +64,10 @@ namespace BaseballProto.Core
         /// <summary>공 도달 후 이 시간까지 스윙 입력이 없으면 지켜봄(Take)</summary>
         public float LateCutoffMs = 120f;
 
+        [Header("타격: 품질 합산")]
+        /// <summary>TimingQuality 가중 평균에서 타이밍 점수 비중 (커서 점수 비중 = 1 − 이 값)</summary>
+        public float TimingWeight = 0.6f;
+
         [Header("타격: 커서")]
         public float CursorRadiusM = 0.12f;
 

@@ -23,6 +23,12 @@ namespace BaseballProto.Quality
 
         public double CursorScore { get; set; }
 
+        /// <summary>타이밍·커서 점수 가중 평균 (0~1). TimingQuality = 2 × 이 값 − 1</summary>
+        public double CombinedScore { get; set; }
+
+        /// <summary>합산에 쓴 타이밍 비중</summary>
+        public double TimingWeight { get; set; }
+
         public BatterAction Action { get; set; }
     }
 }

@@ -17,7 +17,7 @@ namespace BaseballProto.UI
         private const float Margin = 10f;
         private const float TopBarHeight = 64f;
         private const float PanelTop = 150f;
-        private const float SliderRowHeight = 62f;
+        private const float SliderRowHeight = 56f;
         private const float SwingButtonSize = 230f;
         private const float PitchButtonHeight = 72f;
         private const float PitchButtonGap = 8f;
@@ -29,11 +29,14 @@ namespace BaseballProto.UI
         private readonly PitchingInput _pitching;
         private readonly ProtoTuning _tuning;
         private readonly ImpactFeedback _impact;
+        private readonly CursorTrace _trace;
         private readonly Dictionary<int, UiSlider> _capturedSliders = new Dictionary<int, UiSlider>();
         private readonly HashSet<int> _consumedFingers = new HashSet<int>();
 
-        public Hud(DuelController duel, BattingInput batting, PitchingInput pitching, ProtoTuning tuning, ImpactFeedback impact)
+        public Hud(DuelController duel, BattingInput batting, PitchingInput pitching, ProtoTuning tuning, ImpactFeedback impact,
+            CursorTrace trace)
         {
+            _trace = trace;
             _duel = duel;
             _batting = batting;
             _pitching = pitching;
@@ -208,6 +211,11 @@ namespace BaseballProto.UI
             Row("Zero ms", "0", 60f, 250f, () => t.ZeroTimingMs, v => t.ZeroTimingMs = v);
             Row("Calib ms", "0", -50f, 150f, () => t.DisplayLatencyMs, v => t.DisplayLatencyMs = v);
             Row("Cursor R m", "0.000", 0.05f, 0.25f, () => t.CursorRadiusM, v => t.CursorRadiusM = v);
+            Row("Timing weight", "0.00", 0f, 1f, () => t.TimingWeight, v => t.TimingWeight = v);
+            Row("Cursor zero d/R", "0.00", 0.5f, 4f, () => t.CursorZeroRatio,
+                v => t.CursorZeroRatio = Mathf.Max(v, t.CursorPerfectRatio + 0.05f));
+            Row("Cursor perfect d/R", "0.00", 0f, 1.5f, () => t.CursorPerfectRatio,
+                v => t.CursorPerfectRatio = Mathf.Min(v, t.CursorZeroRatio - 0.05f));
             Row("Drag sens", "0.00", 0.3f, 3f, () => t.DragSensitivity, v => t.DragSensitivity = v);
             Row("Gauge period s", "0.00", 0.5f, 2.5f, () => t.GaugePeriodS, v => t.GaugePeriodS = v);
 
@@ -235,6 +243,9 @@ namespace BaseballProto.UI
             Buttons.Add(Toggle(new Rect(Margin, y, width, TopBarHeight), "Hit stop", s.HitStop, () => s.HitStop = !s.HitStop));
             y += TopBarHeight + 8f;
             Buttons.Add(Toggle(new Rect(Margin, y, width, TopBarHeight), "Screen shake", s.Shake, () => s.Shake = !s.Shake));
+            y += TopBarHeight + 8f;
+            Buttons.Add(Toggle(new Rect(Margin, y, width, TopBarHeight), "Cursor log (csv)", _trace.Enabled,
+                () => _trace.SetEnabled(!_trace.Enabled)));
             y += TopBarHeight + 8f;
             PanelRect = new Rect(0f, PanelTop - 6f, w, y - PanelTop + 12f);
         }

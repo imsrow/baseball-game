@@ -33,6 +33,8 @@ namespace BaseballProto.Core
         private DuelController _duel;
         private Hud _hud;
         private HudRenderer _hudRenderer;
+        private CursorTrace _trace;
+        private PlateMapper _mapper;
         private float _fps = 60f;
         private int _lastScreenWidth;
         private int _lastScreenHeight;
@@ -67,12 +69,15 @@ namespace BaseballProto.Core
                 FeedbackSettings.ForCurrentPlatform(haptics));
 
             var mapper = new PlateMapper(camera);
+            _mapper = mapper;
+            _trace = new CursorTrace();
+            _trace.SetEnabled(Application.isEditor);
             _touch = new TouchHub();
             _batting = new BattingInput(_tuning, mapper, screen => _hud != null && _hud.IsOnSwingButton(screen));
             _pitching = new PitchingInput(_tuning, mapper);
             _duel = new DuelController(this, _config, _tuning, _field, ball, _bat, _flight, targetRing, actualRing, _batting,
                 _pitching, impact);
-            _hud = new Hud(_duel, _batting, _pitching, _tuning, impact);
+            _hud = new Hud(_duel, _batting, _pitching, _tuning, impact, _trace);
             _hudRenderer = new HudRenderer();
         }
 
@@ -95,6 +100,8 @@ namespace BaseballProto.Core
             _hud.Layout();
             _events.Clear();
             _touch.Drain(_events);
+            int moveEvents = 0;
+            Vector2 moveDelta = Vector2.zero;
             foreach (PointerEvent e in _events)
             {
                 if (_hud.Handle(e))
@@ -104,6 +111,12 @@ namespace BaseballProto.Core
 
                 if (_duel.Mode == DuelMode.Batting)
                 {
+                    if (e.Phase == PointerPhase.Move)
+                    {
+                        moveEvents++;
+                        moveDelta += e.Delta;
+                    }
+
                     _batting.Handle(e);
                 }
                 else
@@ -117,6 +130,20 @@ namespace BaseballProto.Core
             _bat.Tick(_clock.DeltaTime);
             _flight.Tick(_clock.DeltaTime);
             UpdateCursor();
+            RecordCursor(moveEvents, moveDelta);
+        }
+
+        private void RecordCursor(int moveEvents, Vector2 moveDelta)
+        {
+            if (!_trace.Enabled || _duel.Mode != DuelMode.Batting)
+            {
+                return;
+            }
+
+            Vector2 cursor = _batting.Cursor;
+            Vector3 screen = _field.Camera.WorldToScreenPoint(new Vector3(cursor.x, cursor.y, 0f));
+            _trace.Record(Time.frameCount, ProtoClock.Now, moveEvents, moveDelta, cursor, screen, _mapper.MetersPerPixel(),
+                _tuning.DragSensitivity);
         }
 
         private void OnGUI()
@@ -127,6 +154,7 @@ namespace BaseballProto.Core
         private void OnDestroy()
         {
             _touch?.Dispose();
+            _trace?.Dispose();
         }
 
         private void UpdateCursor()

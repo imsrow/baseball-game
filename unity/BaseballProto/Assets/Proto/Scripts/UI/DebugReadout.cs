@@ -53,6 +53,8 @@ namespace BaseballProto.UI
             lines.Add(F("Timing {0:+0.0;-0.0} ms ({1})  score {2:0.00}", j.TimingErrorMs, when, j.TimingScore));
             lines.Add(F("Cursor dx {0:+0.000;-0.000} dz {1:+0.000;-0.000} m  d/R {2:0.00}  score {3:0.00}",
                 j.CursorDx, j.CursorDz, j.CursorDistanceRatio, j.CursorScore));
+            lines.Add(F("Combined {0:0.00} = {1:0.00} x T{2:0.00} + {3:0.00} x C{4:0.00}", j.CombinedScore, j.TimingWeight,
+                j.TimingScore, 1.0 - j.TimingWeight, j.CursorScore));
             double q = a.TimingQuality ?? 0;
             double dir = a.TimingDirection ?? 0;
             double cv = a.CursorVerticalOffset ?? 0;

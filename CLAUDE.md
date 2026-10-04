@@ -95,5 +95,7 @@
 - 설정(LeagueConfig)이 바뀐 상태에서 불러오면 이어지는 결과가 달라질 수 있다 (`ConfigMatches` 확인)
 - 사람 입력 → 엔진 값 매핑은 Unity 쪽 `Assets/Proto/Scripts/Quality`에 있다. 계수는 `ProtoTuning`, 보정 상한은 `InputModifierConfig`
 - 판정은 입력 이벤트 타임스탬프(`InputState.currentTime` 시간축) 기준. 프레임 시각으로 판정하지 않는다
+- 드래그 이동량은 EnhancedTouch `Touch.delta`를 쓰지 않고 손가락별 직전 위치 차이로 계산한다
+  (`Touch.delta`는 프레임을 넘어가면 직전 기록 delta를 빼는 방식이라 1, −2, 3, −4…로 진동한다. 실기기도 동일)
 - 플랫폼 차이는 `IHaptics`(Android 진동 / 그 외 없음)와 `FeedbackSettings` 기본값으로만 갈린다
 - WebGL에는 시스템 폰트가 없어 한글이 안 보인다. 화면 문구는 영문 (한글이 필요하면 폰트 에셋 추가)
