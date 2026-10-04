@@ -1,0 +1,45 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{095F9B2E-9EB2-475E-8DC5-23054B7332AE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BaseballSim.Engine", "src\BaseballSim.Engine\BaseballSim.Engine.csproj", "{F9F69914-1B24-4AF2-8E6D-7B4EEFAE723F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{F3EE6F17-737B-41FD-AE2A-7E60313A7068}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BaseballSim.Harness", "tools\BaseballSim.Harness\BaseballSim.Harness.csproj", "{19D44B78-23D3-4257-AFBD-5D61DB5E0EC7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{930AB92F-998E-44E0-AE22-E5AAED961C46}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BaseballSim.Engine.Tests", "tests\BaseballSim.Engine.Tests\BaseballSim.Engine.Tests.csproj", "{472540A6-6349-4ED7-8C38-A7E22C8F9FE4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F9F69914-1B24-4AF2-8E6D-7B4EEFAE723F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9F69914-1B24-4AF2-8E6D-7B4EEFAE723F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9F69914-1B24-4AF2-8E6D-7B4EEFAE723F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9F69914-1B24-4AF2-8E6D-7B4EEFAE723F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19D44B78-23D3-4257-AFBD-5D61DB5E0EC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19D44B78-23D3-4257-AFBD-5D61DB5E0EC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19D44B78-23D3-4257-AFBD-5D61DB5E0EC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19D44B78-23D3-4257-AFBD-5D61DB5E0EC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{472540A6-6349-4ED7-8C38-A7E22C8F9FE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{472540A6-6349-4ED7-8C38-A7E22C8F9FE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{472540A6-6349-4ED7-8C38-A7E22C8F9FE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{472540A6-6349-4ED7-8C38-A7E22C8F9FE4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F9F69914-1B24-4AF2-8E6D-7B4EEFAE723F} = {095F9B2E-9EB2-475E-8DC5-23054B7332AE}
+		{19D44B78-23D3-4257-AFBD-5D61DB5E0EC7} = {F3EE6F17-737B-41FD-AE2A-7E60313A7068}
+		{472540A6-6349-4ED7-8C38-A7E22C8F9FE4} = {930AB92F-998E-44E0-AE22-E5AAED961C46}
+	EndGlobalSection
+EndGlobal

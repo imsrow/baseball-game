@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 검증 하네스: 가상 리그 시즌을 시드 고정으로 돌려 리그 지표를 목표치와 비교 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>BaseballSim.Harness</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BaseballSim.Engine\BaseballSim.Engine.csproj" />
+  </ItemGroup>
+
+</Project>

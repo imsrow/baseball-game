@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 시뮬레이션 엔진: Unity·외부 패키지 의존성 없는 순수 C# 라이브러리 -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>BaseballSim.Engine</RootNamespace>
+  </PropertyGroup>
+
+</Project>
