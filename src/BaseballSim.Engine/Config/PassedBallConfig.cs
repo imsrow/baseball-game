@@ -12,10 +12,10 @@ namespace BaseballSim.Engine.Config
         public double WideOutsideZoneM { get; set; } = 0.45;
 
         /// <summary>원바운드·크게 빠진 공을 포수가 놓칠 확률 (블로킹 50). 놓치면 폭투</summary>
-        public double WildPitchRate { get; set; } = 0.10;
+        public double WildPitchRate { get; set; } = 0.20;
 
         /// <summary>정상 범위 공을 포수가 놓칠 확률 (블로킹 50). 놓치면 포일</summary>
-        public double PassedBallRate { get; set; } = 0.0015;
+        public double PassedBallRate { get; set; } = 0.003;
 
         /// <summary>포수 블로킹 1 표준편차당 놓칠 확률 로그 오즈 감소</summary>
         public double BlockingBeta { get; set; } = 0.30;
