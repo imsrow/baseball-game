@@ -20,15 +20,26 @@ namespace BaseballSim.Engine.Stats
 
         public long PitchingChanges { get; private set; }
 
+        /// <summary>교체 종류별 횟수 (SubstitutionKind 인덱스)</summary>
+        public long[] Substitutions { get; } = new long[4];
+
         public void OnEvent(GameEvent gameEvent)
         {
             if (gameEvent is PitchEvent pitch)
             {
                 OnPitch(pitch);
             }
-            else if (gameEvent is SubstitutionEvent sub && sub.Kind == SubstitutionKind.PitchingChange)
+            else if (gameEvent is SubstitutionEvent sub)
             {
-                PitchingChanges++;
+                Substitutions[(int)sub.Kind]++;
+                if (sub.Kind == SubstitutionKind.PitchingChange)
+                {
+                    PitchingChanges++;
+                }
+            }
+            else if (gameEvent is IntentionalWalkEvent walk)
+            {
+                OnIntentionalWalk(walk);
             }
         }
 
@@ -173,6 +184,26 @@ namespace BaseballSim.Engine.Stats
                 batter.Record(outcome);
                 batter.RunsBattedIn += e.RunsBattedIn;
                 pitcher.Record(outcome);
+            }
+        }
+
+        private void OnIntentionalWalk(IntentionalWalkEvent e)
+        {
+            League.Record(PlateAppearanceOutcome.IntentionalWalk);
+            League.RunsBattedIn += e.RunsScored;
+            BattingLine batter = Get(Batters, e.BatterId);
+            batter.Record(PlateAppearanceOutcome.IntentionalWalk);
+            batter.RunsBattedIn += e.RunsScored;
+            PitchingLine pitcher = Get(Pitchers, e.PitcherId);
+            pitcher.Record(PlateAppearanceOutcome.IntentionalWalk);
+            pitcher.Runs += e.RunsScored;
+            Diagnostics.Runs += e.RunsScored;
+            foreach (RunnerMovement move in e.RunnerMovements)
+            {
+                if (move.Scored)
+                {
+                    Get(Batters, move.PlayerId).Runs++;
+                }
             }
         }
 

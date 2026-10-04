@@ -24,6 +24,12 @@ namespace BaseballSim.Engine.State
         /// <summary>아직 등판하지 않은 불펜 투수 (앞쪽 우선)</summary>
         public List<int> AvailableBullpen { get; set; } = new List<int>();
 
+        /// <summary>마무리 투수 (−1 없음)</summary>
+        public int CloserId { get; set; } = -1;
+
+        /// <summary>셋업 투수</summary>
+        public List<int> SetupIds { get; set; } = new List<int>();
+
         /// <summary>아직 출전하지 않은 벤치 야수</summary>
         public List<int> Bench { get; set; } = new List<int>();
 
@@ -63,6 +69,20 @@ namespace BaseballSim.Engine.State
             }
 
             return null;
+        }
+
+        /// <summary>라인업에서 선수의 타순 인덱스 (없으면 −1)</summary>
+        public int LineupIndexOf(int playerId)
+        {
+            for (int i = 0; i < Lineup.Count; i++)
+            {
+                if (Lineup[i].PlayerId == playerId)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         /// <summary>해당 수비 포지션 선수 ID (투수는 현재 투수). 없으면 −1</summary>

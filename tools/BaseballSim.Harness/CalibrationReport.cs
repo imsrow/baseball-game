@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using BaseballSim.Engine.Batting;
 using BaseballSim.Engine.Config;
+using BaseballSim.Engine.Events;
 using BaseballSim.Engine.Stats;
 using BaseballSim.Engine.Units;
 
@@ -95,6 +96,11 @@ namespace BaseballSim.Harness
                 r => (double)(r.Stats.Diagnostics.WildPitches + r.Stats.Diagnostics.PassedBalls) / r.TeamGames, "0.00",
                 t.ReferenceWildPitchPassedBallPerTeamGame.ToString("0.00", CultureInfo.InvariantCulture));
             AppendAux(sb, "낫아웃 출루/경기(팀)", results, r => (double)r.Stats.Diagnostics.DroppedThirdStrikeReaches / r.TeamGames, "0.000", "0.02");
+            AppendAux(sb, "고의4구/경기(팀)", results, r => (double)r.Stats.League.IntentionalWalks / r.TeamGames, "0.00",
+                t.ReferenceIntentionalWalksPerTeamGame.ToString("0.00", CultureInfo.InvariantCulture));
+            AppendAux(sb, "대타/경기(팀)", results, r => (double)r.Stats.Substitutions[(int)SubstitutionKind.PinchHitter] / r.TeamGames, "0.00", "0.6");
+            AppendAux(sb, "대주자/경기(팀)", results, r => (double)r.Stats.Substitutions[(int)SubstitutionKind.PinchRunner] / r.TeamGames, "0.00", "0.15");
+            AppendAux(sb, "대수비/경기(팀)", results, r => (double)r.Stats.Substitutions[(int)SubstitutionKind.DefensiveSubstitution] / r.TeamGames, "0.00", "0.3");
             AppendAux(sb, "투수 교체/경기(팀)", results, r => (double)r.Stats.PitchingChanges / r.TeamGames, "0.00", "3.2");
             AppendAux(sb, "연장 경기 비율", results, r => Rate(r.ExtraInningGames, r.Games), "P", "8%");
             return sb.ToString();

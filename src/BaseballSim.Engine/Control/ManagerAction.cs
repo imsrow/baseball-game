@@ -28,6 +28,37 @@ namespace BaseballSim.Engine.Control
             return new ManagerAction { Type = ManagerActionType.StealAttempt, FromBase = fromBase };
         }
 
+        public static ManagerAction IntentionalWalk()
+        {
+            return new ManagerAction { Type = ManagerActionType.IntentionalWalk };
+        }
+
+        public static ManagerAction PinchHit(int incomingPlayerId, int outgoingPlayerId)
+        {
+            return new ManagerAction
+            {
+                Type = ManagerActionType.PinchHitter,
+                IncomingPlayerId = incomingPlayerId,
+                OutgoingPlayerId = outgoingPlayerId,
+            };
+        }
+
+        /// <param name="fromBase">대주자가 들어갈 베이스 (1~3)</param>
+        public static ManagerAction PinchRun(int incomingPlayerId, int fromBase)
+        {
+            return new ManagerAction { Type = ManagerActionType.PinchRunner, IncomingPlayerId = incomingPlayerId, FromBase = fromBase };
+        }
+
+        public static ManagerAction DefensiveSub(int incomingPlayerId, int outgoingPlayerId)
+        {
+            return new ManagerAction
+            {
+                Type = ManagerActionType.DefensiveSubstitution,
+                IncomingPlayerId = incomingPlayerId,
+                OutgoingPlayerId = outgoingPlayerId,
+            };
+        }
+
         public static ManagerAction Bunt(BuntType type)
         {
             return new ManagerAction { Type = ManagerActionType.BuntSign, BuntType = type };

@@ -34,6 +34,8 @@ namespace BaseballSim.Engine.Simulation
                 CurrentPitcherId = setup.StartingPitcherId,
                 AvailableBullpen = new List<int>(setup.Bullpen),
                 Bench = new List<int>(setup.Bench),
+                CloserId = setup.CloserId,
+                SetupIds = new List<int>(setup.SetupIds),
             };
             foreach (LineupSlot slot in setup.Lineup)
             {

@@ -177,8 +177,10 @@ namespace BaseballSim.Harness
                 relievers.Add(p);
             }
 
-            // 불펜은 낮은 등급부터 기용해 경기 후반에 좋은 투수가 나오게 한다
+            // 불펜은 낮은 등급부터 기용, 최고 투수는 마무리, 그다음 둘은 셋업
             league.Bullpen = relievers.OrderBy(PitcherQuality).Select(p => p.Id).ToList();
+            league.CloserId = league.Bullpen[league.Bullpen.Count - 1];
+            league.SetupIds = new List<int> { league.Bullpen[league.Bullpen.Count - 2], league.Bullpen[league.Bullpen.Count - 3] };
             return league;
         }
 

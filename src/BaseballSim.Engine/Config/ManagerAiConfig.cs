@@ -59,5 +59,53 @@ namespace BaseballSim.Engine.Config
 
         /// <summary>기습번트 조건을 만족할 때 초구 사인 확률</summary>
         public double BuntForHitSignRate { get; set; } = 0.04;
+
+        // ── 고의4구 ──
+
+        /// <summary>고의4구 대상 타자 타격 가치 z 이상</summary>
+        public double IntentionalWalkMinBatterZ { get; set; } = 0.8;
+
+        /// <summary>현재 타자와 다음 타자의 타격 가치 z 차이 이상</summary>
+        public double IntentionalWalkMinGapZ { get; set; } = 1.0;
+
+        // ── 대타·대주자·대수비 ──
+
+        /// <summary>대타를 고려하는 점수 차 이내</summary>
+        public int PinchHitMaxRunDifference { get; set; } = 3;
+
+        /// <summary>벤치 타자가 현재 타자보다 타격 가치 z가 이만큼 높아야 대타</summary>
+        public double PinchHitMinGapZ { get; set; } = 0.8;
+
+        /// <summary>상대 투수와 반대 손 타자의 타격 가치 z 보너스 (같은 손은 감점)</summary>
+        public double PlatoonValueZ { get; set; } = 0.3;
+
+        /// <summary>대주자를 고려하는 이닝 이상</summary>
+        public int PinchRunMinInning { get; set; } = 8;
+
+        /// <summary>스피드가 이 값 이하인 주자만 교체</summary>
+        public int PinchRunMaxRunnerSpeed { get; set; } = 40;
+
+        /// <summary>대주자가 원래 주자보다 이만큼 빨라야 교체</summary>
+        public int PinchRunMinSpeedGap { get; set; } = 20;
+
+        /// <summary>앞선 경기에서 대수비를 고려하는 이닝 이상</summary>
+        public int DefensiveSubMinInning { get; set; } = 8;
+
+        /// <summary>대수비가 실효 수비력에서 이만큼 나아야 교체</summary>
+        public double DefensiveSubMinGap { get; set; } = 12;
+
+        /// <summary>실효 수비력이 이 값 미만인 포지션은 이닝 시작 시 보강 (대타 이후 등)</summary>
+        public double DefensiveFixMinRating { get; set; } = 38;
+
+        // ── 불펜 역할 ──
+
+        /// <summary>세이브 상황 최대 리드</summary>
+        public int SaveMaxLead { get; set; } = 3;
+
+        /// <summary>마무리 투입 이닝 이상</summary>
+        public int CloserInning { get; set; } = 9;
+
+        /// <summary>셋업 투입 이닝</summary>
+        public int SetupInning { get; set; } = 8;
     }
 }

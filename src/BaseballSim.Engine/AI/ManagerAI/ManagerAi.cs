@@ -4,13 +4,26 @@ namespace BaseballSim.Engine.AI.ManagerAI
 {
     /// <summary>
     /// 감독 AI. 판단 기준 계수는 ManagerAiConfig에 있다.
-    /// 현재: 투수 교체, 도루, 번트. 고의4구·대타·대주자·대수비는 다음 단계에서 추가.
+    /// 투수 교체(불펜 역할), 도루, 번트, 고의4구, 대타, 대주자, 대수비.
     /// </summary>
     public sealed class ManagerAi : IManagerDecision
     {
         public Decision<ManagerOrders> DecideOffense(ManagerContext context)
         {
-            return Decision<ManagerOrders>.Ready(ManagerOrders.None());
+            var orders = new ManagerOrders();
+            ManagerAction pinchHit = SubstitutionAdvisor.PinchHit(context);
+            if (pinchHit != null)
+            {
+                orders.Actions.Add(pinchHit);
+            }
+
+            ManagerAction pinchRun = SubstitutionAdvisor.PinchRun(context, pinchHit?.IncomingPlayerId ?? -1);
+            if (pinchRun != null)
+            {
+                orders.Actions.Add(pinchRun);
+            }
+
+            return Decision<ManagerOrders>.Ready(orders);
         }
 
         public Decision<ManagerOrders> DecidePrePitch(ManagerContext context)
@@ -32,13 +45,20 @@ namespace BaseballSim.Engine.AI.ManagerAI
 
         public Decision<ManagerOrders> DecideDefense(ManagerContext context)
         {
+            var orders = new ManagerOrders();
+            orders.Actions.AddRange(SubstitutionAdvisor.DefensiveSubs(context));
             int reliever = PitchingChangeAdvisor.Advise(context);
             if (reliever >= 0)
             {
-                return Decision<ManagerOrders>.Ready(ManagerOrders.Of(ManagerAction.PitchingChange(reliever)));
+                orders.Actions.Add(ManagerAction.PitchingChange(reliever));
             }
 
-            return Decision<ManagerOrders>.Ready(ManagerOrders.None());
+            if (IntentionalWalkAdvisor.Advise(context))
+            {
+                orders.Actions.Add(ManagerAction.IntentionalWalk());
+            }
+
+            return Decision<ManagerOrders>.Ready(orders);
         }
     }
 }

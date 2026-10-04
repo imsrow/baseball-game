@@ -35,8 +35,8 @@ namespace BaseballSim.Harness
                     gameId++;
                     GameSetup setup = BuildSetup(gameId, teams[away], teams[home], season);
                     GameState final = GameSimulator.Play(setup, config, SeedMixer.Derive(seed, (ulong)gameId), stats);
-                    RecordRelievers(teams[away], final.Away);
-                    RecordRelievers(teams[home], final.Home);
+                    RecordRelievers(teams[away], final.Away, season);
+                    RecordRelievers(teams[home], final.Home, season);
                     if (final.Inning > config.Rules.InningsPerGame)
                     {
                         extraInnings++;
@@ -68,38 +68,65 @@ namespace BaseballSim.Harness
         {
             int starter = team.Rotation[team.GamesPlayed % season.RotationSize];
             team.GamesPlayed++;
+            List<int> bullpen = BullpenOrder(team, season);
             return new GameTeamSetup
             {
                 Team = team.Team,
-                Lineup = team.Lineup,
+                Lineup = team.Lineup.Select(slot => slot.Clone()).ToList(),
                 StartingPitcherId = starter,
-                Bullpen = BullpenOrder(team),
+                Bullpen = bullpen,
+                CloserId = bullpen.Contains(team.CloserId) ? team.CloserId : -1,
+                SetupIds = team.SetupIds.Where(bullpen.Contains).ToList(),
                 Bench = team.Bench,
             };
         }
 
         /// <summary>
-        /// 불펜 기용 순서: 최근에 덜 던진 투수 먼저, 같으면 기본 순서(낮은 등급 먼저).
-        /// (A단계 하네스용 간이 휴식 모델. 정식 불펜 운용은 B단계 ManagerAI)
+        /// 불펜 기용 순서: 휴식이 필요한 투수(연속 등판 한도, 전 경기 많은 투구)는 빼고,
+        /// 최근에 덜 던진 투수 먼저, 같으면 기본 순서(낮은 등급 먼저).
         /// </summary>
-        private static List<int> BullpenOrder(LeagueTeam team)
+        private static List<int> BullpenOrder(LeagueTeam team, SeasonConfig season)
         {
+            int game = team.GamesPlayed;
             return team.Bullpen
                 .Select((id, index) => (id, index))
-                .OrderBy(x => team.LastRelieverAppearance.TryGetValue(x.id, out int last) ? last : -1)
+                .Where(x => !NeedsRest(team, x.id, game, season))
+                .OrderBy(x => team.ReliefLog.TryGetValue(x.id, out ReliefRecord r) ? r.LastGame : -1)
                 .ThenBy(x => x.index)
                 .Select(x => x.id)
                 .ToList();
         }
 
-        private static void RecordRelievers(LeagueTeam team, TeamGameState state)
+        private static bool NeedsRest(LeagueTeam team, int pitcherId, int game, SeasonConfig season)
         {
+            if (!team.ReliefLog.TryGetValue(pitcherId, out ReliefRecord record) || record.LastGame != game - 1)
+            {
+                return false;
+            }
+
+            return record.ConsecutiveGames >= season.BullpenMaxConsecutiveGames
+                || record.LastPitches >= season.BullpenHeavyWorkloadPitches;
+        }
+
+        private static void RecordRelievers(LeagueTeam team, TeamGameState state, SeasonConfig season)
+        {
+            int game = team.GamesPlayed;
             foreach (PitcherGameState pitcher in state.Pitchers)
             {
-                if (!pitcher.IsStarter)
+                if (pitcher.IsStarter)
                 {
-                    team.LastRelieverAppearance[pitcher.PlayerId] = team.GamesPlayed;
+                    continue;
                 }
+
+                if (!team.ReliefLog.TryGetValue(pitcher.PlayerId, out ReliefRecord record))
+                {
+                    record = new ReliefRecord();
+                    team.ReliefLog[pitcher.PlayerId] = record;
+                }
+
+                record.ConsecutiveGames = record.LastGame == game - 1 ? record.ConsecutiveGames + 1 : 1;
+                record.LastGame = game;
+                record.LastPitches = pitcher.PitchCount;
             }
         }
     }

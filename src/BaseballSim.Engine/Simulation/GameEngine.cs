@@ -352,9 +352,52 @@ namespace BaseballSim.Engine.Simulation
                 return "지시가 없습니다.";
             }
 
+            TeamGameState team = _state.Offense;
+            var incoming = new HashSet<int>();
+            var replacedBases = new HashSet<int>();
+            bool pinchHit = false;
             foreach (ManagerAction action in orders.Actions)
             {
-                return "공격 측에서 할 수 없는 지시입니다: " + action.Type;
+                switch (action.Type)
+                {
+                    case ManagerActionType.PinchHitter:
+                        if (pinchHit)
+                        {
+                            return "대타는 한 명만 지시할 수 있습니다.";
+                        }
+
+                        if (action.OutgoingPlayerId != _state.CurrentBatterId)
+                        {
+                            return "대타는 현재 타자 대신 들어갑니다.";
+                        }
+
+                        pinchHit = true;
+                        break;
+                    case ManagerActionType.PinchRunner:
+                        if (action.FromBase < 1 || action.FromBase > 3 || _state.Bases[action.FromBase - 1] == null)
+                        {
+                            return "대주자를 넣을 주자가 없습니다.";
+                        }
+
+                        if (!replacedBases.Add(action.FromBase))
+                        {
+                            return "같은 주자를 두 번 교체할 수 없습니다.";
+                        }
+
+                        if (team.LineupIndexOf(_state.Bases[action.FromBase - 1].PlayerId) < 0)
+                        {
+                            return "라인업에 없는 주자입니다.";
+                        }
+
+                        break;
+                    default:
+                        return "타석 시작 공격 측에서 할 수 없는 지시입니다: " + action.Type;
+                }
+
+                if (!team.Bench.Contains(action.IncomingPlayerId) || !incoming.Add(action.IncomingPlayerId))
+                {
+                    return "출전할 수 없는 벤치 선수입니다: " + action.IncomingPlayerId;
+                }
             }
 
             return null;
@@ -362,7 +405,44 @@ namespace BaseballSim.Engine.Simulation
 
         private void ApplyOffenseOrders(ManagerOrders orders, bool byHuman)
         {
+            TeamGameState team = _state.Offense;
+            foreach (ManagerAction action in orders.Actions)
+            {
+                if (action.Type == ManagerActionType.PinchHitter)
+                {
+                    Substitute(team, _state.OffenseSide, action.OutgoingPlayerId, action.IncomingPlayerId,
+                        SubstitutionKind.PinchHitter, byHuman);
+                }
+                else if (action.Type == ManagerActionType.PinchRunner)
+                {
+                    BaseRunner runner = _state.Bases[action.FromBase - 1];
+                    int outgoing = runner.PlayerId;
+                    Substitute(team, _state.OffenseSide, outgoing, action.IncomingPlayerId, SubstitutionKind.PinchRunner, byHuman);
+                    runner.PlayerId = action.IncomingPlayerId;
+                }
+            }
+
             _state.Phase = GamePhase.DefenseManager;
+        }
+
+        /// <summary>라인업 자리 교체 (포지션은 그 자리를 그대로 이어받는다)</summary>
+        private void Substitute(TeamGameState team, TeamSide side, int outgoing, int incoming, SubstitutionKind kind, bool byHuman)
+        {
+            int index = team.LineupIndexOf(outgoing);
+            LineupSlot slot = team.Lineup[index];
+            slot.PlayerId = incoming;
+            team.Bench.Remove(incoming);
+            team.Removed.Add(outgoing);
+            Emit(new SubstitutionEvent
+            {
+                Kind = kind,
+                Side = side,
+                OutgoingPlayerId = outgoing,
+                IncomingPlayerId = incoming,
+                Position = slot.Position,
+                OutsAtChange = _state.Outs,
+                ByHuman = byHuman,
+            });
         }
 
         private string ValidateDefenseOrders(ManagerOrders orders)
@@ -374,16 +454,48 @@ namespace BaseballSim.Engine.Simulation
 
             TeamGameState team = _state.Defense;
             var incoming = new HashSet<int>();
+            var outgoing = new HashSet<int>();
+            bool pitchingChange = false;
+            bool intentionalWalk = false;
             foreach (ManagerAction action in orders.Actions)
             {
-                if (action.Type != ManagerActionType.PitchingChange)
+                switch (action.Type)
                 {
-                    return "수비 측에서 할 수 없는 지시입니다: " + action.Type;
-                }
+                    case ManagerActionType.PitchingChange:
+                        if (pitchingChange)
+                        {
+                            return "투수 교체는 한 번만 지시할 수 있습니다.";
+                        }
 
-                if (!team.AvailableBullpen.Contains(action.IncomingPlayerId) || !incoming.Add(action.IncomingPlayerId))
-                {
-                    return "등판할 수 없는 투수입니다: " + action.IncomingPlayerId;
+                        if (!team.AvailableBullpen.Contains(action.IncomingPlayerId))
+                        {
+                            return "등판할 수 없는 투수입니다: " + action.IncomingPlayerId;
+                        }
+
+                        pitchingChange = true;
+                        break;
+                    case ManagerActionType.DefensiveSubstitution:
+                        if (team.LineupIndexOf(action.OutgoingPlayerId) < 0 || !outgoing.Add(action.OutgoingPlayerId))
+                        {
+                            return "교체할 수 없는 선수입니다: " + action.OutgoingPlayerId;
+                        }
+
+                        if (!team.Bench.Contains(action.IncomingPlayerId) || !incoming.Add(action.IncomingPlayerId))
+                        {
+                            return "출전할 수 없는 벤치 선수입니다: " + action.IncomingPlayerId;
+                        }
+
+                        break;
+                    case ManagerActionType.IntentionalWalk:
+                        if (intentionalWalk)
+                        {
+                            return "고의4구는 한 번만 지시할 수 있습니다.";
+                        }
+
+                        intentionalWalk = true;
+                        break;
+                    default:
+                        return "수비 측에서 할 수 없는 지시입니다: " + action.Type;
                 }
             }
 
@@ -392,12 +504,53 @@ namespace BaseballSim.Engine.Simulation
 
         private void ApplyDefenseOrders(ManagerOrders orders, bool byHuman)
         {
+            TeamGameState team = _state.Defense;
+            bool intentionalWalk = false;
             foreach (ManagerAction action in orders.Actions)
             {
-                ChangePitcher(action.IncomingPlayerId, byHuman);
+                switch (action.Type)
+                {
+                    case ManagerActionType.PitchingChange:
+                        ChangePitcher(action.IncomingPlayerId, byHuman);
+                        break;
+                    case ManagerActionType.DefensiveSubstitution:
+                        Substitute(team, _state.DefenseSide, action.OutgoingPlayerId, action.IncomingPlayerId,
+                            SubstitutionKind.DefensiveSubstitution, byHuman);
+                        break;
+                    case ManagerActionType.IntentionalWalk:
+                        intentionalWalk = true;
+                        break;
+                }
+            }
+
+            if (intentionalWalk)
+            {
+                ApplyIntentionalWalk(byHuman);
+                return;
             }
 
             _state.Phase = GamePhase.OffensePrePitch;
+        }
+
+        /// <summary>고의4구: 투구 없이 타자 1루, 밀려나는 주자만 진루</summary>
+        private void ApplyIntentionalWalk(bool byHuman)
+        {
+            int batterId = _state.CurrentBatterId;
+            var ev = new IntentionalWalkEvent
+            {
+                PlateAppearanceNumber = _state.PlateAppearanceNumber,
+                BatterId = batterId,
+                PitcherId = _state.Defense.CurrentPitcherId,
+                OutsBefore = _state.Outs,
+                ByHuman = byHuman,
+            };
+            List<RunnerMovement> moves = ForcedAdvances(batterId);
+            ev.RunsScored = MoveRunners(moves, false, false);
+            ev.RunnerMovements = moves;
+            ev.AwayScoreAfter = _state.AwayScore;
+            ev.HomeScoreAfter = _state.HomeScore;
+            Emit(ev);
+            EndPlateAppearance();
         }
 
         private string ValidatePrePitchOrders(ManagerOrders orders)
@@ -875,6 +1028,15 @@ namespace BaseballSim.Engine.Simulation
         /// </summary>
         private void ApplyRunnerMovements(PitchEvent ev, List<RunnerMovement> moves, bool nullified, bool isHomeRun)
         {
+            int runs = MoveRunners(moves, nullified, isHomeRun);
+            ev.RunnerMovements = moves;
+            ev.RunsNullified = nullified;
+            ev.RunsScored = runs;
+        }
+
+        /// <summary>주자 이동을 루 상태와 점수에 반영하고 인정된 득점 수를 돌려준다</summary>
+        private int MoveRunners(List<RunnerMovement> moves, bool nullified, bool isHomeRun)
+        {
             var newBases = new BaseRunner[3];
             var existing = new Dictionary<int, BaseRunner>();
             var moved = new HashSet<int>();
@@ -956,9 +1118,7 @@ namespace BaseballSim.Engine.Simulation
             }
 
             _state.Bases = newBases;
-            ev.RunnerMovements = moves;
-            ev.RunsNullified = nullified;
-            ev.RunsScored = runs;
+            return runs;
         }
 
         // ───────────────────────── 타석·이닝·경기 종료 ─────────────────────────
@@ -968,6 +1128,7 @@ namespace BaseballSim.Engine.Simulation
             TeamGameState offense = _state.Offense;
             offense.NextBatterIndex = (offense.NextBatterIndex + 1) % offense.Lineup.Count;
             _state.Defense.CurrentPitcher.BattersFaced++;
+            _state.PlateAppearancesThisHalf++;
             ResetCountForNewPlateAppearance();
 
             if (_state.Outs >= _config.Rules.OutsPerHalfInning)
@@ -1003,6 +1164,7 @@ namespace BaseballSim.Engine.Simulation
             RulesConfig rules = _config.Rules;
             _state.Outs = 0;
             _state.Bases = new BaseRunner[3];
+            _state.PlateAppearancesThisHalf = 0;
 
             if (_state.IsTopHalf)
             {

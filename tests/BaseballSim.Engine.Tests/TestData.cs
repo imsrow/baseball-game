@@ -17,6 +17,8 @@ namespace BaseballSim.Engine.Tests
             Position.RightField, Position.LeftField, Position.Catcher, Position.Shortstop,
         };
 
+        private static readonly Position[] BenchPositions = { Position.Catcher, Position.Shortstop, Position.CenterField };
+
         public static GameSetup AverageGame(int gameId = 1)
         {
             return new GameSetup
@@ -46,6 +48,16 @@ namespace BaseballSim.Engine.Tests
                 Player reliever = Pitcher(idBase + 60 + i, 35);
                 team.Roster.Add(reliever);
                 setup.Bullpen.Add(reliever.Id);
+            }
+
+            setup.CloserId = setup.Bullpen[5];
+            setup.SetupIds.Add(setup.Bullpen[4]);
+
+            foreach (Position position in BenchPositions)
+            {
+                Player p = Hitter(idBase + 20 + setup.Bench.Count, position);
+                team.Roster.Add(p);
+                setup.Bench.Add(p.Id);
             }
 
             return setup;

@@ -40,6 +40,9 @@ namespace BaseballSim.Engine.State
 
         public int EventSequence { get; set; }
 
+        /// <summary>이번 반이닝에 끝난 타석 수 (이닝 시작 판단용)</summary>
+        public int PlateAppearancesThisHalf { get; set; }
+
         /// <summary>이번 투구에 도루를 시도하는 주자의 출발 베이스 (0이면 없음)</summary>
         public int StealFromBase { get; set; }
 

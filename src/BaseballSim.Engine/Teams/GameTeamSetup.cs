@@ -17,6 +17,12 @@ namespace BaseballSim.Engine.Teams
         /// <summary>불펜 투수 (앞쪽일수록 우선 기용)</summary>
         public List<int> Bullpen { get; set; } = new List<int>();
 
+        /// <summary>마무리 투수 (불펜에 포함, 없으면 −1)</summary>
+        public int CloserId { get; set; } = -1;
+
+        /// <summary>셋업 투수 (불펜에 포함)</summary>
+        public List<int> SetupIds { get; set; } = new List<int>();
+
         /// <summary>벤치 야수</summary>
         public List<int> Bench { get; set; } = new List<int>();
     }
