@@ -53,6 +53,10 @@
 - Unity 엔진 DLL 갱신: `powershell -ExecutionPolicy Bypass -File tools/sync-engine.ps1` (또는 에디터 메뉴 Baseball > Sync Engine DLL).
   엔진을 고치면 반드시 다시 실행. DLL은 git에 넣지 않는다
 
+## Git
+
+- 작업은 main 브랜치에 커밋하고 푸시한다
+
 ## 현재 상태
 
 - 엔진 1단계 완료 (마지막 엔진 커밋 `b37c208`)
