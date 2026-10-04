@@ -47,8 +47,10 @@ namespace BaseballSim.Engine.Batting
             return LogOdds.Shift(p, shift);
         }
 
+        /// <param name="timingDirection">사람 조작 타이밍 방향(−1 이름 ~ +1 늦음). AI는 null(중립)</param>
+        /// <param name="cursorVerticalOffset">사람 조작 커서 상하 오차(−1 아래 ~ +1 위). AI는 null(중립)</param>
         public BattedBall Generate(BatterRatings batter, Hand battingHand, ExecutedPitch pitch, bool sameHand,
-            double? timingQuality, IRandomSource random)
+            double? timingQuality, IRandomSource random, double? timingDirection = null, double? cursorVerticalOffset = null)
         {
             BattedBallConfig bc = _config.BattedBall;
             LeagueEnvironment env = _config.Environment;
@@ -84,6 +86,12 @@ namespace BaseballSim.Engine.Batting
             launchAngle += bc.LocationLaunchAngleDegPerM * (pitch.Actual.Z - _config.StrikeZone.CenterHeightM);
             launchAngle += bc.PitchTypeLaunchAngleOffsetDeg.Get(pitch.Type);
 
+            // 사람 조작: 커서가 공보다 위면 공 윗부분을 쳐서 발사각이 낮아진다
+            if (cursorVerticalOffset.HasValue)
+            {
+                launchAngle -= ClampUnit(cursorVerticalOffset.Value) * _config.InputModifier.MaxCursorLaunchAngleShiftDeg;
+            }
+
             launchAngle = Math.Max(bc.MinLaunchAngleDeg, Math.Min(bc.MaxLaunchAngleDeg, launchAngle));
             exitVelocity = Math.Max(bc.MinExitVelocityKmh, Math.Min(bc.MaxExitVelocityKmh, exitVelocity));
 
@@ -91,13 +99,13 @@ namespace BaseballSim.Engine.Batting
             {
                 ExitVelocityKmh = exitVelocity,
                 LaunchAngleDeg = launchAngle,
-                SprayAngleDeg = SampleSpray(batter, battingHand, pitch, launchAngle, random),
+                SprayAngleDeg = SampleSpray(batter, battingHand, pitch, launchAngle, timingDirection, random),
                 IsSolid = solid,
             };
         }
 
         private double SampleSpray(BatterRatings batter, Hand battingHand, ExecutedPitch pitch, double launchAngle,
-            IRandomSource random)
+            double? timingDirection, IRandomSource random)
         {
             BattedBallConfig bc = _config.BattedBall;
 
@@ -109,6 +117,12 @@ namespace BaseballSim.Engine.Batting
             if (launchAngle < bc.GroundBallPullMaxLaunchAngleDeg)
             {
                 pull += bc.GroundBallExtraPullDeg;
+            }
+
+            // 사람 조작: 이르면(−) 당겨치기, 늦으면(+) 밀어치기 쪽
+            if (timingDirection.HasValue)
+            {
+                pull -= ClampUnit(timingDirection.Value) * _config.InputModifier.MaxTimingSprayShiftDeg;
             }
 
             double mean = pullSign * pull;
@@ -123,6 +137,11 @@ namespace BaseballSim.Engine.Batting
             }
 
             return Math.Max(-bc.FairAngleDeg, Math.Min(bc.FairAngleDeg, spray));
+        }
+
+        private static double ClampUnit(double value)
+        {
+            return Math.Max(-1.0, Math.Min(1.0, value));
         }
     }
 }

@@ -98,7 +98,8 @@ namespace BaseballSim.Engine.Simulation
                 return new PitchResolution { Result = PitchResult.Foul };
             }
 
-            BattedBall ball = BattedBalls.Generate(batter.Batting, battingHand, executed, sameHand, action.TimingQuality, random);
+            BattedBall ball = BattedBalls.Generate(batter.Batting, battingHand, executed, sameHand, action.TimingQuality, random,
+                action.TimingDirection, action.CursorVerticalOffset);
             PlayResult play = Fielding.Resolve(ball, situationBuilder(), random);
             return new PitchResolution
             {

@@ -128,6 +128,59 @@ namespace BaseballSim.Engine.Tests
         }
 
         [Fact]
+        public void 타이밍_방향_이르면_당겨치기_늦으면_밀어치기()
+        {
+            var gen = new BattedBallGenerator(_config);
+            double early = 0, late = 0, earlyLeft = 0;
+            const int n = 3000;
+            var rngEarly = new Pcg32Random(21);
+            var rngLate = new Pcg32Random(21);
+            var rngEarlyLeft = new Pcg32Random(21);
+            for (int i = 0; i < n; i++)
+            {
+                early += gen.Generate(new BatterRatings(), Hand.Right, Pitch(AttackRegion.Heart), false, null, rngEarly, -1.0).SprayAngleDeg;
+                late += gen.Generate(new BatterRatings(), Hand.Right, Pitch(AttackRegion.Heart), false, null, rngLate, 1.0).SprayAngleDeg;
+                earlyLeft += gen.Generate(new BatterRatings(), Hand.Left, Pitch(AttackRegion.Heart), false, null, rngEarlyLeft, -1.0).SprayAngleDeg;
+            }
+
+            Assert.True(early / n < late / n - 10, "우타자: 이르면 좌측(−), 늦으면 우측(+)");
+            Assert.True(earlyLeft / n > 10, "좌타자: 이르면 우측(+)");
+        }
+
+        [Fact]
+        public void 커서가_공보다_위면_발사각_낮게()
+        {
+            var gen = new BattedBallGenerator(_config);
+            double above = 0, below = 0;
+            const int n = 3000;
+            var rngAbove = new Pcg32Random(22);
+            var rngBelow = new Pcg32Random(22);
+            for (int i = 0; i < n; i++)
+            {
+                above += gen.Generate(new BatterRatings(), Hand.Right, Pitch(AttackRegion.Heart), false, null, rngAbove, null, 1.0).LaunchAngleDeg;
+                below += gen.Generate(new BatterRatings(), Hand.Right, Pitch(AttackRegion.Heart), false, null, rngBelow, null, -1.0).LaunchAngleDeg;
+            }
+
+            Assert.True(above / n < below / n - 10);
+        }
+
+        [Fact]
+        public void 방향_입력이_없으면_기존과_동일()
+        {
+            var gen = new BattedBallGenerator(_config);
+            var rngA = new Pcg32Random(23);
+            var rngB = new Pcg32Random(23);
+            for (int i = 0; i < 500; i++)
+            {
+                BattedBall a = gen.Generate(new BatterRatings(), Hand.Right, Pitch(AttackRegion.Heart), false, null, rngA);
+                BattedBall b = gen.Generate(new BatterRatings(), Hand.Right, Pitch(AttackRegion.Heart), false, null, rngB, 0.0, 0.0);
+                Assert.Equal(a.SprayAngleDeg, b.SprayAngleDeg, 10);
+                Assert.Equal(a.LaunchAngleDeg, b.LaunchAngleDeg, 10);
+                Assert.Equal(a.ExitVelocityKmh, b.ExitVelocityKmh, 10);
+            }
+        }
+
+        [Fact]
         public void 정타확률_평균대결은_리그값()
         {
             var gen = new BattedBallGenerator(_config);

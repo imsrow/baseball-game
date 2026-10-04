@@ -2,7 +2,7 @@ namespace BaseballSim.Engine.Config
 {
     /// <summary>
     /// 사람 조작 입력 품질(−1 ~ +1)이 엔진 확률을 보정할 수 있는 상한.
-    /// 1단계에서는 필드와 상한만 정의한다. 실제 입력 → 품질 매핑은 Unity 조작 단계에서 정한다.
+    /// 실제 입력 → 품질 매핑은 Unity 조작 레이어에서 정한다.
     /// </summary>
     public sealed class InputModifierConfig
     {
@@ -14,5 +14,11 @@ namespace BaseballSim.Engine.Config
 
         /// <summary>스윙 타이밍 품질 ±1일 때 정타 로그 오즈 최대 변화</summary>
         public double MaxSwingSolidLogitShift { get; set; } = 0.40;
+
+        /// <summary>스윙 타이밍 방향 ±1일 때 타구 방향각 평균 최대 이동 (도). 이르면 당겨치기 쪽</summary>
+        public double MaxTimingSprayShiftDeg { get; set; } = 20.0;
+
+        /// <summary>커서 상하 오차 ±1일 때 발사각 최대 변화 (도). 커서가 공보다 위면 낮게</summary>
+        public double MaxCursorLaunchAngleShiftDeg { get; set; } = 15.0;
     }
 }
