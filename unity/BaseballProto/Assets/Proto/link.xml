@@ -1,0 +1,4 @@
+<!-- IL2CPP 코드 제거 방지: 엔진은 설정 지문(ConfigFingerprint)에 리플렉션을 쓴다 -->
+<linker>
+  <assembly fullname="BaseballSim.Engine" preserve="all" />
+</linker>

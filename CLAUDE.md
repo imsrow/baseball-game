@@ -50,6 +50,8 @@
 
 - `dotnet build`, `dotnet test` (xUnit)
 - 하네스 (요청 시에만): `dotnet run -c Release --project tools/BaseballSim.Harness -- --seeds 1`
+- Unity 엔진 DLL 갱신: `powershell -ExecutionPolicy Bypass -File tools/sync-engine.ps1` (또는 에디터 메뉴 Baseball > Sync Engine DLL).
+  엔진을 고치면 반드시 다시 실행. DLL은 git에 넣지 않는다
 
 ## 현재 상태
 
@@ -57,7 +59,10 @@
   - A: 상태 머신, 투구 판정(실행·인지·스윙·컨택), 타구 생성·비행, 물리 기반 수비·주루, 기본 AI, 검증 하네스
   - B: 도루·번트·폭투·포일·낫아웃, 고의4구, 대타·대주자·대수비, 불펜 역할(마무리·셋업)
   - C: 직접↔시뮬 전환, 멈춤 조건, 사람 감독 흐름, 저장/불러오기
-- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 89개 통과
+- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 92개 통과
+- 2단계 진행 중: Unity 1:1 투타 대결 프로토타입 (`unity/BaseballProto`, Unity 6000.6.4f1, URP, 세로 고정)
+  - 엔진 최소 확장: `BatterAction.TimingDirection`(이르면 당겨치기), `CursorVerticalOffset`(커서가 위면 발사각 낮게),
+    상한은 `InputModifierConfig.MaxTimingSprayShiftDeg` / `MaxCursorLaunchAngleShiftDeg`. AI는 null(중립)이라 하네스 결과 불변
 
 ## GameEngine 주요 API
 
@@ -84,4 +89,7 @@
 - 저장하지 않는 것(UI 쪽 상태): 컨트롤러 객체, `HumanManagerDecision`의 걸어둔 지시·교체 거절 기록,
   진행 중인 `SimulateUntil`/멈춤 조건. 불러온 뒤 담당 방식(`SavedGame.Modes`)대로 새 컨트롤러가 연결된다
 - 설정(LeagueConfig)이 바뀐 상태에서 불러오면 이어지는 결과가 달라질 수 있다 (`ConfigMatches` 확인)
-- 사람 입력 품질(`ReleaseQuality`, `TimingQuality`)은 필드와 상한만 정의되어 있다. 입력→품질 매핑은 Unity 조작 단계에서 정한다
+- 사람 입력 → 엔진 값 매핑은 Unity 쪽 `Assets/Proto/Scripts/Quality`에 있다. 계수는 `ProtoTuning`, 보정 상한은 `InputModifierConfig`
+- 판정은 입력 이벤트 타임스탬프(`InputState.currentTime` 시간축) 기준. 프레임 시각으로 판정하지 않는다
+- 플랫폼 차이는 `IHaptics`(Android 진동 / 그 외 없음)와 `FeedbackSettings` 기본값으로만 갈린다
+- WebGL에는 시스템 폰트가 없어 한글이 안 보인다. 화면 문구는 영문 (한글이 필요하면 폰트 에셋 추가)

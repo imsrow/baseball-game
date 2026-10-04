@@ -1,0 +1,28 @@
+# Unity 생성물
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# IDE 생성 파일
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+.vs/
+.idea/
+
+# 빌드 결과물
+*.apk
+*.aab
+crashlytics-build.properties
+
+# 엔진 DLL은 tools/sync-engine.ps1로 빌드·복사한다 (원본은 src/BaseballSim.Engine)
+/Assets/Plugins/BaseballSim/
+/Assets/Plugins/BaseballSim.meta
