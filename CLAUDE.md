@@ -50,3 +50,38 @@
 
 - `dotnet build`, `dotnet test` (xUnit)
 - 하네스 (요청 시에만): `dotnet run -c Release --project tools/BaseballSim.Harness -- --seeds 1`
+
+## 현재 상태
+
+- 엔진 1단계 완료 (마지막 엔진 커밋 `b37c208`)
+  - A: 상태 머신, 투구 판정(실행·인지·스윙·컨택), 타구 생성·비행, 물리 기반 수비·주루, 기본 AI, 검증 하네스
+  - B: 도루·번트·폭투·포일·낫아웃, 고의4구, 대타·대주자·대수비, 불펜 역할(마무리·셋업)
+  - C: 직접↔시뮬 전환, 멈춤 조건, 사람 감독 흐름, 저장/불러오기
+- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 89개 통과
+
+## GameEngine 주요 API
+
+- `new GameEngine(GameSetup, LeagueConfig, seed, ControllerSet, IEventSink)`: 경기 생성
+- `Step()`: 결정 지점 하나 처리 후 다음 결정 지점에서 멈춤. 담당자가 사람이면 `AwaitingInput` + `Pending`
+- `Submit(PitchCall | BatterAction | ManagerOrders)`: 사람 입력. 규칙 위반은 거절 사유와 함께 `Accepted = false`
+- `RunUntil(IStopCondition)`: 조건 충족 / 사람 입력 필요 / 경기 종료까지 진행
+- `SimulateUntil(IStopCondition)`: 사람 담당 역할도 그 구간만 AI가 대행, 끝나면 원래 담당자로 복원
+- `StopConditions`: 타석·반이닝·이닝 종료, `InningReached`, `ScoringThreat/Chance`, `TeamBatting`, `PlayerUp`,
+  `PitchingChangeMoment`, `Any` (진행 요청마다 새로 생성)
+- `Save()` / `GameEngine.Load(bytes, config, out SavedGame)`: 어느 결정 지점에서든 저장, `SavedGame.ConfigMatches`로 설정 불일치 확인
+- `ControllerSet.Assign(side, IPitchingDecision | IBattingDecision | IManagerDecision)`: 언제든 교체.
+  AI는 `AiControllers`, 사람은 `HumanPitchingDecision` / `HumanBattingDecision` / `HumanManagerDecision`
+- `HumanManagerDecision`: `Queue(action)`로 작전·교체를 미리 걸어둠(멈추지 않음), AI가 교체할 순간에만
+  `Pending`(추천은 `ManagerContext.Suggestion`), `DelegateToAi = true`면 작전·교체 모두 AI
+- 기록은 이벤트 로그(`State.Log`, `IEventSink`)에서 `StatsAggregator`로 파생
+
+## Unity 사용 시 주의
+
+- 엔진은 netstandard2.1 + C# 9. `record`·`init` 등 C# 9 런타임 지원이 필요한 문법과 외부 패키지는 쓰지 않는다
+- 엔진은 동기식이다. UI는 `RunUntil`/`Step` 결과(`AwaitingInput`)를 보고 입력을 받아 `Submit`한다
+  (코루틴·프레임 단위로 나눠 호출해 애니메이션과 맞춘다)
+- AI 결정도 반드시 `context.Random`(경기 RNG)만 사용해야 저장/불러오기 후 재현성이 유지된다
+- 저장하지 않는 것(UI 쪽 상태): 컨트롤러 객체, `HumanManagerDecision`의 걸어둔 지시·교체 거절 기록,
+  진행 중인 `SimulateUntil`/멈춤 조건. 불러온 뒤 담당 방식(`SavedGame.Modes`)대로 새 컨트롤러가 연결된다
+- 설정(LeagueConfig)이 바뀐 상태에서 불러오면 이어지는 결과가 달라질 수 있다 (`ConfigMatches` 확인)
+- 사람 입력 품질(`ReleaseQuality`, `TimingQuality`)은 필드와 상한만 정의되어 있다. 입력→품질 매핑은 Unity 조작 단계에서 정한다
