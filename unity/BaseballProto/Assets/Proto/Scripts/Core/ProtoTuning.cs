@@ -154,6 +154,127 @@ namespace BaseballProto.Core
         public float MaxGroundBallDisplayS = 2f;
         public float FoulDisplayS = 1.2f;
 
+        [Header("자동 진행 (연출·프레임 확인용)")]
+        /// <summary>사람 몫의 스윙·투구도 AI가 정하고 다음 공을 자동으로 시작한다. FX 패널에서 켜고 끈다</summary>
+        public bool AutoPlay;
+
+        /// <summary>자동 진행 때 다음 공까지 쉬는 시간</summary>
+        public float AutoPlayPauseS = 0.6f;
+
+        [Header("인플레이 연출 (엔진 결과를 보여주기만 함)")]
+        /// <summary>타구 카메라: 인플레이 타구를 따라가는 시점. FX 패널에서 켜고 끈다</summary>
+        public bool BallCam = true;
+
+        /// <summary>인플레이 연출 재생 배속 (FX 패널: 1x / 1.5x / 2x)</summary>
+        public float PlaySpeed = 1f;
+
+        /// <summary>연출이 이보다 길면 더 빨리 재생해 이 시간 안에 끝낸다 (화면 시간, s)</summary>
+        public float MaxPlayDisplayS = 7f;
+
+        /// <summary>외야수 첫 발 시각. 엔진 반응 시간(첫 발 지연 + 경로 손실)과 달리 바로 움직이고, 곡선 경로·속도로 도착 시각을 맞춘다</summary>
+        public float OutfielderFirstStepS = 0.3f;
+
+        public float InfielderFirstStepS = 0.2f;
+
+        /// <summary>뜬공을 여유 있게 잡을 때 낙하 지점에 미리 도착해 자리 잡는 시간</summary>
+        public float CatchSettleS = 0.5f;
+
+        /// <summary>연출용 야수 최고 이동 속도 (m/s). 엔진 도착 시각이 이보다 빠른 속도를 요구하면 늦게 도착</summary>
+        public float FielderMaxSpeedMps = 9f;
+
+        /// <summary>곡선 경로 휨 (이동 거리 대비): 외야수 / 내야수</summary>
+        public float OutfielderRouteBend = 0.15f;
+
+        public float InfielderRouteBend = 0.05f;
+
+        /// <summary>송구가 주자보다 먼저(아웃)·나중(세이프) 도착하는 간격</summary>
+        public float OutSyncMarginS = 0.15f;
+
+        /// <summary>주자 속도 조정 범위: 그 주자 스피드 능력치 ± 이 표준편차(1 SD = 10점)에 해당하는 시간 안에서만</summary>
+        public float RunnerSpeedRangeSd = 1.5f;
+
+        /// <summary>송구 속도 조정 범위 (엔진 송구 속도 대비 배율)</summary>
+        public float ThrowSpeedMinRatio = 0.7f;
+
+        public float ThrowSpeedMaxRatio = 1.3f;
+
+        /// <summary>송구 준비 시간 하한 (공을 잡은 뒤, s)</summary>
+        public float MinThrowTransferS = 0.3f;
+
+        public float ThrowReleaseHeightM = 1.8f;
+        public float GloveHeightM = 1.2f;
+
+        /// <summary>송구 궤적 높이 (송구 거리 대비)</summary>
+        public float ThrowArcRatio = 0.05f;
+
+        /// <summary>땅볼 바운드 수·첫 바운드 높이</summary>
+        public int GroundBallHops = 3;
+
+        public float GroundBallHopHeightM = 0.7f;
+
+        /// <summary>외야에 떨어진 공의 첫 바운드 높이</summary>
+        public float LandingHopHeightM = 1.2f;
+
+        /// <summary>악송구가 베이스를 지나쳐 가는 거리</summary>
+        public float OvershootM = 12f;
+
+        /// <summary>뜬공 때 주자가 떨어졌다 돌아오는 리드 거리</summary>
+        public float RunnerLeadM = 3f;
+
+        /// <summary>뜬공 아웃 때 타자가 1루 쪽으로 뛰는 속도 배율 (클수록 느림, 조깅)</summary>
+        public float BatterJogScale = 1.3f;
+
+        /// <summary>홈런 베이스 일주 속도 배율 (클수록 느림)</summary>
+        public float HomeRunTrotScale = 1.7f;
+
+        /// <summary>아웃·득점한 주자가 사라지기까지</summary>
+        public float RunnerHideDelayS = 0.7f;
+
+        /// <summary>연출 대상이 아닌 야수가 공 쪽으로 움직이는 거리 (최대, m)</summary>
+        public float DriftMaxM = 4f;
+
+        /// <summary>옆 외야수가 공 쪽으로 백업 가는 비율 (거리 대비, 최대 BackupMaxM)</summary>
+        public float BackupRatio = 0.35f;
+
+        public float BackupMaxM = 18f;
+
+        /// <summary>마지막 동작 뒤 연출 여유 / 홈런은 공이 떨어진 뒤 여유</summary>
+        public float PlayEndPadS = 0.5f;
+
+        public float HomeRunTailS = 1.5f;
+
+        [Header("타구 카메라")]
+        public float BallCamBlendS = 0.4f;
+
+        /// <summary>
+        /// 카메라 위치 (높이, 관심 지점에서 홈 쪽으로 물러난 거리): 멀리(홈런·장타) / 중간 / 가까이(땅볼).
+        /// 홈에서 관심 지점을 바라보는 방향 뒤에서 따라간다
+        /// </summary>
+        public Vector2 BallCamFar = new Vector2(36f, 40f);
+
+        public Vector2 BallCamMid = new Vector2(26f, 28f);
+        public Vector2 BallCamNear = new Vector2(17f, 17f);
+
+        /// <summary>카메라가 바라보는 높이에 공 높이를 얼마나 반영할지 (작을수록 땅을 내려다본다)</summary>
+        public float BallCamLookHeightRatio = 0.3f;
+
+        public float BallCamMoveSmoothS = 0.45f;
+
+        /// <summary>타구 카메라에서 공 크기 배율 (실제 크기는 수십 m 밖에서 안 보인다)</summary>
+        public float BallCamBallScale = 4f;
+
+        /// <summary>장타 시점을 쓰는 비거리 (m)</summary>
+        public float BallCamFarDistanceM = 80f;
+
+        public float BallCamMinFovDeg = 34f;
+        public float BallCamMaxFovDeg = 72f;
+
+        /// <summary>관심 지점이 화면 가장자리에 붙지 않게 시야 여유 배율</summary>
+        public float BallCamFitMargin = 1.25f;
+
+        public float BallCamLookSmoothS = 0.25f;
+        public float BallCamFovSmoothS = 0.35f;
+
         public ProtoTuning Clone()
         {
             return (ProtoTuning)MemberwiseClone();

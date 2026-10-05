@@ -26,5 +26,14 @@ namespace BaseballProto.View
         public static readonly Color BallShadow = new Color(0.16f, 0.12f, 0.09f);
         public static readonly Color Target = new Color(1f, 0.25f, 0.25f);
         public static readonly Color Actual = new Color(0.2f, 0.9f, 1f);
+
+        // 인플레이 연출: 수비는 투수와 같은 파랑, 주자는 타자와 같은 빨강
+        public static readonly Color Fielder = new Color(0.20f, 0.30f, 0.65f);
+        public static readonly Color Runner = new Color(0.75f, 0.22f, 0.20f);
+        public static readonly Color RunnerOut = new Color(0.45f, 0.45f, 0.48f);
+        public static readonly Color Skin = new Color(0.93f, 0.78f, 0.62f);
+        public static readonly Color Wall = new Color(0.12f, 0.30f, 0.20f);
+        public static readonly Color InfieldGrass = new Color(0.25f, 0.53f, 0.25f);
+        public static readonly Color Stands = new Color(0.36f, 0.38f, 0.44f);
     }
 }

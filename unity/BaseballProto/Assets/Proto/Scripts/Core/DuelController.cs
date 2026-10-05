@@ -41,6 +41,7 @@ namespace BaseballProto.Core
         private readonly BattingInput _batting;
         private readonly PitchingInput _pitching;
         private readonly ImpactFeedback _impact;
+        private readonly PlayDirector _director;
 
         private GameEngine _engine;
         private int _gameCount;
@@ -48,7 +49,7 @@ namespace BaseballProto.Core
 
         public DuelController(MonoBehaviour host, LeagueConfig config, ProtoTuning tuning, FieldView field, BallView ball,
             BatView bat, BattedBallFlight flight, RingView targetRing, RingView actualRing, BattingInput batting,
-            PitchingInput pitching, ImpactFeedback impact, TimingCalibration calibration)
+            PitchingInput pitching, ImpactFeedback impact, TimingCalibration calibration, PlayDirector director)
         {
             Calibration = calibration;
             _host = host;
@@ -63,6 +64,7 @@ namespace BaseballProto.Core
             _batting = batting;
             _pitching = pitching;
             _impact = impact;
+            _director = director;
             SwingBias = new SwingBiasTracker(tuning.SwingBiasWindow);
         }
 
@@ -104,7 +106,20 @@ namespace BaseballProto.Core
         public GameStatLine Stats { get; } = new GameStatLine();
 
         private bool _readyRequested;
+        private bool _skipRequested;
         private int _statsIndex;
+
+        /// <summary>인플레이 연출 중 (탭하면 결과로 바로)</summary>
+        public bool CanSkip { get; private set; }
+
+        /// <summary>인플레이 연출을 건너뛴다 (화면 탭·스페이스)</summary>
+        public void RequestSkip()
+        {
+            if (CanSkip)
+            {
+                _skipRequested = true;
+            }
+        }
 
         /// <summary>대기 중이면 다음 공을 시작한다 (START 버튼·화면 탭·스페이스)</summary>
         public void RequestPitch()
@@ -220,7 +235,20 @@ namespace BaseballProto.Core
             // 보정이 음수(이르게 치는 습관)여도 공이 홈플레이트에 오기 전에 지켜봄으로 끊지 않는다
             double cutoff = trajectory.ArrivalTime
                 + (_tuning.LateCutoffMs + System.Math.Max(0f, _tuning.DisplayLatencyMs)) / 1000.0;
-            _batting.Arm(trajectory.ReleaseTime);
+            bool auto = _tuning.AutoPlay;
+            BatterAction autoAction = null;
+            bool autoBatStarted = false;
+            double autoSwingStart = trajectory.ArrivalTime - _tuning.SwingDurationS * SwingContactFraction;
+            if (auto)
+            {
+                // 자동 진행: 사람 몫의 스윙 판단도 AI (경기 RNG를 쓰므로 재현성 유지)
+                autoAction = AiControllers.Batting.DecideSwing(ctx).Value;
+            }
+            else
+            {
+                _batting.Arm(trajectory.ReleaseTime);
+            }
+
             Phase = DuelPhase.InFlight;
 
             bool swung = false;
@@ -229,7 +257,21 @@ namespace BaseballProto.Core
             {
                 double now = ProtoClock.Now;
                 _ball.Show(trajectory.PositionAt(now));
-                if (_batting.TryTakeSwing(out swing) && swing.Time <= cutoff)
+                if (auto)
+                {
+                    if (autoAction.Type == BatterActionType.Swing && !autoBatStarted && now >= autoSwingStart)
+                    {
+                        _bat.Swing(_tuning.SwingDurationS);
+                        autoBatStarted = true;
+                    }
+
+                    if (now >= trajectory.ArrivalTime)
+                    {
+                        break;
+                    }
+                }
+
+                if (!auto && _batting.TryTakeSwing(out swing) && swing.Time <= cutoff)
                 {
                     swung = true;
                     break;
@@ -252,7 +294,12 @@ namespace BaseballProto.Core
             _batting.Disarm();
 
             BatterAction action;
-            if (swung)
+            if (auto)
+            {
+                LastBatting = null;
+                action = autoAction;
+            }
+            else if (swung)
             {
                 LastBatting = BattingQualityMapper.Judge(swing, trajectory.ArrivalTime, pitch.Actual, _tuning);
                 action = LastBatting.Action;
@@ -302,6 +349,15 @@ namespace BaseballProto.Core
             }
 
             Phase = DuelPhase.Aiming;
+            if (_tuning.AutoPlay)
+            {
+                // 자동 진행: 사람 몫의 투구도 AI
+                LastPitching = null;
+                LastBatting = null;
+                yield return _host.StartCoroutine(SubmitPitchAndShow(ctx, AiControllers.Pitching.DecidePitch(ctx).Value));
+                yield break;
+            }
+
             _pitching.Begin(types);
             while (_pitching.Stage != PitchingStage.Done)
             {
@@ -324,9 +380,14 @@ namespace BaseballProto.Core
             LastPitching = ReleaseQualityMapper.Judge(_pitching, _tuning);
             LastBatting = null;
             _targetRing.Show(_pitching.Target);
+            yield return _host.StartCoroutine(SubmitPitchAndShow(ctx, LastPitching.Call));
+        }
 
+        /// <summary>투구를 엔진에 넘기고 AI 타자의 판단까지 진행한 뒤 투구·결과를 보여준다</summary>
+        private IEnumerator SubmitPitchAndShow(PitchingContext ctx, PitchCall call)
+        {
             int before = _engine.State.Log.Count;
-            SubmitResult result = _engine.Submit(LastPitching.Call);
+            SubmitResult result = _engine.Submit(call);
             if (!result.Accepted)
             {
                 Message = "Rejected: " + result.Reason;
@@ -408,6 +469,15 @@ namespace BaseballProto.Core
                 yield break;
             }
 
+            if (ev.Result == PitchResult.InPlay && ev.BattedBall != null)
+            {
+                bool homeRun = ev.PlateAppearanceOutcome == PlateAppearanceOutcome.HomeRun;
+                _impact.Play(homeRun ? ImpactKind.HomeRun : ev.BattedBall.IsSolid ? ImpactKind.SolidContact : ImpactKind.WeakContact);
+                yield return _host.StartCoroutine(PlayBattedBall(ev, plate));
+                FinishOutcome();
+                yield break;
+            }
+
             switch (ev.Result)
             {
                 case PitchResult.InPlay:
@@ -449,6 +519,42 @@ namespace BaseballProto.Core
                 yield return null;
             }
 
+            FinishOutcome();
+        }
+
+        /// <summary>
+        /// 인플레이 연출: 엔진 결과대로 공·야수·주자를 움직이고 (탭하면 결과로 바로), 끝나면 결과 문구를 띄운다
+        /// </summary>
+        private IEnumerator PlayBattedBall(PitchEvent ev, Vector3 contact)
+        {
+            PlayScript script = _director.Build(ev, contact, _field.BatterSide, _engine.Players);
+            _director.Begin(script);
+            _skipRequested = false;
+            CanSkip = true;
+            while (_director.IsPlaying)
+            {
+                if (_skipRequested || _restart)
+                {
+                    _director.Skip();
+                    break;
+                }
+
+                yield return null;
+            }
+
+            CanSkip = false;
+            _skipRequested = false;
+            float hold = _tuning.ResultHoldS;
+            ShowHeadline(ResultText.Headline(ev), hold);
+            double holdEnd = ProtoClock.Now + hold;
+            while (ProtoClock.Now < holdEnd && !_restart)
+            {
+                yield return null;
+            }
+        }
+
+        private void FinishOutcome()
+        {
             _flight.Stop();
             _ball.Hide();
             _bat.ResetPose();
@@ -461,6 +567,7 @@ namespace BaseballProto.Core
 
         private void Prepare(Player pitcher, Player batter, Hand battingHand)
         {
+            _director.ResetForPitch(_engine.State);
             _field.SetBatter(battingHand);
             _field.SetPitcherHand(pitcher.Throws);
             _bat.SetSide(_field.BatterSide);
@@ -476,7 +583,8 @@ namespace BaseballProto.Core
             Phase = DuelPhase.Ready;
             _readyRequested = false;
             AwaitingReady = true;
-            while (!_readyRequested && !_restart)
+            double autoAt = ProtoClock.Now + _tuning.AutoPlayPauseS;
+            while (!_readyRequested && !_restart && !(_tuning.AutoPlay && ProtoClock.Now >= autoAt))
             {
                 yield return null;
             }

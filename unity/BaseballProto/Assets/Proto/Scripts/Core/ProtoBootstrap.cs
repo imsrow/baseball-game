@@ -4,6 +4,7 @@ using BaseballProto.Input;
 using BaseballProto.UI;
 using BaseballProto.View;
 using BaseballSim.Engine.Config;
+using BaseballSim.Engine.Fielding;
 using UnityEngine;
 
 namespace BaseballProto.Core
@@ -32,6 +33,7 @@ namespace BaseballProto.Core
         private FieldView _field;
         private BatView _bat;
         private BattedBallFlight _flight;
+        private PlayDirector _director;
         private RingView _cursorRing;
         private BallView _ball;
         private TimingCalibration _calibration;
@@ -89,6 +91,14 @@ namespace BaseballProto.Core
             _ball = ball;
             _bat = new BatView(root);
             _flight = new BattedBallFlight(ball, _tuning);
+
+            // 인플레이 연출: 경기장 장식, 수비수 9명, 주자, 타구 카메라 (규격·위치는 엔진 설정 그대로)
+            var geometry = new FieldGeometry(_config.Field);
+            new StadiumView(root, geometry);
+            var fielders = new FieldersView(root, geometry);
+            var runners = new RunnersView(root, geometry);
+            var ballCam = new BallCamera(camera, _field, _shake, _tuning);
+            _director = new PlayDirector(_config, geometry, _tuning, _field, ball, fielders, runners, ballCam);
             _cursorRing = new RingView(root, "Cursor", _tuning.CursorRadiusM, ProtoColors.Cursor);
             var targetRing = new RingView(root, "Target", 0.04f, ProtoColors.Target);
             var actualRing = new RingView(root, "Actual", 0.045f, ProtoColors.Actual);
@@ -109,7 +119,7 @@ namespace BaseballProto.Core
             _pitching = new PitchingInput(_tuning, mapper);
             _calibration = new TimingCalibration(_tuning);
             _duel = new DuelController(this, _config, _tuning, _field, ball, _bat, _flight, targetRing, actualRing, _batting,
-                _pitching, impact, _calibration);
+                _pitching, impact, _calibration, _director);
             _hud = new Hud(_duel, _batting, _pitching, _tuning, impact, _trace);
             _hudRenderer = new HudRenderer();
         }
@@ -130,7 +140,11 @@ namespace BaseballProto.Core
             {
                 _lastScreenWidth = Screen.width;
                 _lastScreenHeight = Screen.height;
-                _field.ApplyCamera();
+                if (!_director.Camera.Active)
+                {
+                    // 타구 카메라 중이면 끝날 때 새 화면 비율로 타석 시점을 다시 잡는다
+                    _field.ApplyCamera();
+                }
             }
 
             _hud.Layout();
@@ -176,6 +190,7 @@ namespace BaseballProto.Core
             _ball.ShadowEnabled = _tuning.BallShadow;
             _calibration.Tick(ProtoClock.Now);
             _clock.Tick(dt);
+            _director.Tick(_clock.DeltaTime);
             _shake.Tick(dt);
             _bat.Tick(_clock.DeltaTime);
             _flight.Tick(_clock.DeltaTime);
@@ -192,6 +207,12 @@ namespace BaseballProto.Core
             switch (e.Phase)
             {
                 case PointerPhase.SwingKey:
+                    if (_duel.CanSkip)
+                    {
+                        _duel.RequestSkip();
+                        return true;
+                    }
+
                     if (_duel.AwaitingReady)
                     {
                         _duel.RequestPitch();
@@ -201,6 +222,13 @@ namespace BaseballProto.Core
                     return false;
 
                 case PointerPhase.Down:
+                    if (_duel.CanSkip)
+                    {
+                        // 인플레이 연출 중 탭: 결과로 바로
+                        _duel.RequestSkip();
+                        return true;
+                    }
+
                     _tapDowns[e.FingerId] = e;
                     return false;
 

@@ -58,6 +58,13 @@ namespace BaseballProto.View
             _batter.transform.localPosition = new Vector3(BatterSide * BatterOffsetXM, p.y, p.z);
         }
 
+        /// <summary>타자·투수 큐브 표시 (인플레이 연출 중에는 주자·야수 모양이 대신한다)</summary>
+        public void SetActorsVisible(bool visible)
+        {
+            _batter.SetActive(visible);
+            _pitcher.SetActive(visible);
+        }
+
         public void SetPitcherHand(Hand throws)
         {
             Vector3 p = _pitcher.transform.localPosition;

@@ -30,6 +30,12 @@ namespace BaseballProto.View
             _elapsed = 0f;
         }
 
+        /// <summary>다른 곳(타구 카메라)이 카메라 위치를 새로 정했으면 직전 흔들림 오프셋은 이미 사라졌다</summary>
+        public void ClearApplied()
+        {
+            _applied = Vector3.zero;
+        }
+
         public void Tick(float unscaledDeltaTime)
         {
             _camera.localPosition -= _applied;

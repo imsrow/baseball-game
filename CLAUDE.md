@@ -59,6 +59,9 @@
   - Pages는 Content-Encoding 헤더를 못 붙여 Gzip + Decompression Fallback(JS 해제), 파일명 해시
   - 템플릿 `Assets/WebGLTemplates/BaseballPWA`: iOS 홈 화면 메타, 네트워크 우선 서비스 워커, 렌더 배율 상한 2
   - WebGL은 첫 탭 전 소리가 안 나므로 TAP TO START 후 시작. targetFrameRate는 −1(브라우저 rAF)
+- 인플레이 연출 스냅샷 (에디터를 닫고): `Unity.exe -batchmode -quit -projectPath unity/BaseballProto -executeMethod BaseballProto.EditorTools.PlaySnapshots.RenderBatch`
+  (에디터 메뉴 Baseball > Render Play Snapshots). AI 경기에서 홈런·2루타·뜬공·병살·땅볼·안타 실제 이벤트를 골라 연출을 재생하며
+  6장씩 찍어 `plays_portrait.png`·`plays_landscape.png`로 저장. 출력 폴더는 환경 변수 `PLAY_SNAPSHOT_DIR` (없으면 `Builds/Snapshots`)
 - Unity 엔진 DLL 갱신: `powershell -ExecutionPolicy Bypass -File tools/sync-engine.ps1` (또는 에디터 메뉴 Baseball > Sync Engine DLL).
   엔진을 고치면 반드시 다시 실행. DLL은 git에 넣지 않는다
 
@@ -108,6 +111,21 @@
   - 투구 조작: 구종 버튼 → 존 탭으로 목표 → 게이지 멈춤(릴리스 품질)
   - 디버그 표시: 입력 오차 → 엔진 보정량 → 결과, 최근 10스윙 평균 타이밍·dz, 현재 calib. FX: 진동·소리·히트스톱·흔들림·그림자·커서 로그
 
+- 3단계 (2026-10-05): 인플레이 타구 연출. 결과는 엔진이 정하고 연출은 보여주기만 한다
+  - 흐름: `PlayScriptBuilder`(엔진 PitchEvent → 대본 `PlayScript`: 공·야수·주자 `MotionTrack`, 송구) → `PlayDirector`(재생·건너뛰기)
+    → `FieldersView`·`RunnersView`·`BallView`·`BallCamera`. 경기장 장식은 `StadiumView`(내야, 베이스, 파울 라인, 펜스, 관중석)
+  - 엔진 표시용 필드(`BattedBallData.LandingX/Y/LandingTimeS/FieldedTimeS/FielderArrivalS`)를 그대로 지난다: 공은 엔진 낙하·포구 지점과 시각,
+    처리 야수는 0.3초(내야 0.2초)에 첫 발 → 곡선 경로·가속으로 엔진 도착 시각에 도착. 여유 있는 뜬공은 조깅해서 자리 잡고 들어오며 포구,
+    엔진이 늦게 도착해도 잡았으면 몸을 날림. 송구 받는 야수는 베이스 커버, 나머지는 공 쪽으로 반응(옆 외야수는 백업)
+  - 아웃·세이프 순서: 주자 속도는 그 주자 스피드 ±1.5 SD 시간 안에서만 맞추고, 모자라면 송구 속도(0.7~1.3배)·시작 시각을 조정
+  - 타구 카메라: 관심 지점(공, 공 아래 땅, 처리 야수 또는 송구 받는 곳)을 홈 쪽 뒤·위에서 따라감. 홈런·장타 멀리, 땅볼 가까이.
+    시야각은 화면 비율로 맞춤(세로·가로). 공은 카메라가 멀어지는 만큼 키움(`BallCamBallScale`). 포수 모양은 타석 시점 카메라 바로 앞이라
+    카메라가 넘어간 뒤에만 보임
+  - FX 패널: Ball cam 켜고 끄기, Play speed 1x/1.5x/2x(연출이 7초 넘으면 더 빨리), Auto play(사람 몫 스윙·투구도 AI, 다음 공 자동: 연출·프레임 확인용)
+  - 연출 중 탭(또는 스페이스) = 결과로 바로. 결과 문구는 연출이 끝난 뒤
+  - 검증: 대본 불변식(공이 엔진 지점 통과, 아웃이면 공 먼저/세이프면 주자 먼저, 야수 속도)을 AI 1만여 타구로 확인했다 (Unity 밖에서 스텁으로 컴파일).
+    시각 확인은 PlaySnapshots
+
 ### Unity TUNE 기본값 (2단계 종료 시점)
 
 | 항목 | 기본값 | 위치 |
@@ -128,6 +146,9 @@
 | 슬라이더 없음 | LateCutoff 120 ms, HoldTakeMargin 0.10 m, 그림자 켬, 보정 10스윙·300 ms 초과 제외, 평균 창 10스윙 | `ProtoTuning` |
 
 ## 나중에 할 일 (남은 이슈)
+
+- 인플레이 연출 아이폰 실기기 FPS 미확인 (데스크톱 브라우저에서만 약 60 FPS 확인). FX의 Auto play를 켜고 디버그 표시의 FPS로 확인
+- 연출 미세 문제: 병살 중계 송구 실책 때 타자 주자가 공보다 늦게 2루에 도착해 보이는 경우가 드물게 있음 (1만 타구 중 4건)
 
 - AI 타자가 스트라이크만 던지는 투수에게 적응하지 못한다. 한가운데만 던져도 Heart 공을 약 28% 그냥 지켜봐서
   루킹 삼진이 나온다 (밸런스 비교 f: 타율 .260, K% 23%). 투수의 존 투구 비율을 보고 스윙 성향을 바꾸는 식으로 개선

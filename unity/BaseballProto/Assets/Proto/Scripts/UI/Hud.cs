@@ -22,6 +22,7 @@ namespace BaseballProto.UI
         private const float InfoBlockHeight = 92f;
         private const float SliderRowHeight = 52f;
         private const float FxRowHeight = 60f;
+        private const float FxRowHeightLandscape = 50f;
         private const float SwingButtonSize = 230f;
         private const float DragPadSize = 280f;
         private const float DragPadSlack = 40f;
@@ -385,6 +386,7 @@ namespace BaseballProto.UI
         private void LayoutFx(Rect safe, float panelTop)
         {
             FeedbackSettings s = _impact.Settings;
+            float rowHeight = Landscape ? FxRowHeightLandscape : FxRowHeight;
             float y = panelTop;
             float width = Landscape ? Mathf.Min(LandscapePanelMaxWidth, safe.width - Margin * 2f) : safe.width - Margin * 2f;
             float x = safe.x + Margin;
@@ -392,20 +394,44 @@ namespace BaseballProto.UI
             void Add(UiButton button)
             {
                 Buttons.Add(button);
-                y += FxRowHeight + 6f;
+                y += rowHeight + 6f;
             }
 
+            Rect Row() => new Rect(x, y, width, rowHeight);
+
             Add(_impact.HapticsSupported
-                ? Toggle(new Rect(x, y, width, FxRowHeight), "Vibration", s.Vibration, () => s.Vibration = !s.Vibration)
-                : new UiButton(new Rect(x, y, width, FxRowHeight), "Vibration: n/a on this platform", () => { }));
-            Add(Toggle(new Rect(x, y, width, FxRowHeight), "Sound", s.Sound, () => s.Sound = !s.Sound));
-            Add(Toggle(new Rect(x, y, width, FxRowHeight), "Hit stop", s.HitStop, () => s.HitStop = !s.HitStop));
-            Add(Toggle(new Rect(x, y, width, FxRowHeight), "Screen shake", s.Shake, () => s.Shake = !s.Shake));
-            Add(Toggle(new Rect(x, y, width, FxRowHeight), "Ball shadow", _tuning.BallShadow,
-                () => _tuning.BallShadow = !_tuning.BallShadow));
-            Add(Toggle(new Rect(x, y, width, FxRowHeight), "Cursor log (csv)", _trace.Enabled,
-                () => _trace.SetEnabled(!_trace.Enabled)));
+                ? Toggle(Row(), "Vibration", s.Vibration, () => s.Vibration = !s.Vibration)
+                : new UiButton(Row(), "Vibration: n/a on this platform", () => { }));
+            Add(Toggle(Row(), "Sound", s.Sound, () => s.Sound = !s.Sound));
+            Add(Toggle(Row(), "Hit stop", s.HitStop, () => s.HitStop = !s.HitStop));
+            Add(Toggle(Row(), "Screen shake", s.Shake, () => s.Shake = !s.Shake));
+            Add(Toggle(Row(), "Ball shadow", _tuning.BallShadow, () => _tuning.BallShadow = !_tuning.BallShadow));
+            Add(Toggle(Row(), "Ball cam", _tuning.BallCam, () => _tuning.BallCam = !_tuning.BallCam));
+            Add(new UiButton(Row(), "Play speed: " + SpeedName(_tuning.PlaySpeed) + "  (tap to change)", CyclePlaySpeed));
+            Add(Toggle(Row(), "Auto play (AI swings/pitches)", _tuning.AutoPlay, () => _tuning.AutoPlay = !_tuning.AutoPlay));
+            Add(Toggle(Row(), "Cursor log (csv)", _trace.Enabled, () => _trace.SetEnabled(!_trace.Enabled)));
             PanelRect = new Rect(0f, panelTop - 6f, x + width + Margin, y - panelTop + 12f);
+        }
+
+        private static readonly float[] PlaySpeeds = { 1f, 1.5f, 2f };
+
+        private void CyclePlaySpeed()
+        {
+            int next = 0;
+            for (int i = 0; i < PlaySpeeds.Length; i++)
+            {
+                if (Mathf.Approximately(_tuning.PlaySpeed, PlaySpeeds[i]))
+                {
+                    next = (i + 1) % PlaySpeeds.Length;
+                }
+            }
+
+            _tuning.PlaySpeed = PlaySpeeds[next];
+        }
+
+        private static string SpeedName(float speed)
+        {
+            return speed.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "x";
         }
 
         private static UiButton Toggle(Rect rect, string label, bool on, System.Action flip)

@@ -126,7 +126,11 @@ namespace BaseballProto.UI
         private void DrawHint(Hud hud)
         {
             string hint;
-            if (hud.Duel.AwaitingReady)
+            if (hud.Duel.CanSkip)
+            {
+                hint = "Tap to skip";
+            }
+            else if (hud.Duel.AwaitingReady)
             {
                 hint = "START or tap: next pitch";
             }

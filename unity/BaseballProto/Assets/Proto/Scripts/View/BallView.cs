@@ -15,6 +15,8 @@ namespace BaseballProto.View
 
         private readonly GameObject _ball;
         private readonly GameObject _shadow;
+        private readonly float _diameter;
+        private readonly float _shadowDiameter;
 
         public BallView(Transform parent, float diameter, float shadowDiameter)
         {
@@ -24,6 +26,15 @@ namespace BaseballProto.View
             _shadow = PrimitiveFactory.Create(PrimitiveType.Sphere, "BallShadow", parent, Vector3.zero,
                 new Vector3(shadowDiameter, ShadowThicknessM, shadowDiameter), ProtoColors.BallShadow);
             _shadow.SetActive(false);
+            _diameter = diameter;
+            _shadowDiameter = shadowDiameter;
+        }
+
+        /// <summary>공 크기 배율 (타구 카메라에서는 멀리서도 보이게 키운다). 1 = 실제 크기</summary>
+        public void SetScale(float scale)
+        {
+            _ball.transform.localScale = Vector3.one * (_diameter * scale);
+            _shadow.transform.localScale = new Vector3(_shadowDiameter * scale, ShadowThicknessM, _shadowDiameter * scale);
         }
 
         public Vector3 Position => _ball.transform.localPosition;
