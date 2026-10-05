@@ -337,6 +337,10 @@ namespace BaseballProto.UI
             Row("Release sigma", "0.00", 0f, 1.5f, () => (float)m.MaxPitchExecutionSigmaLogShift,
                 v => m.MaxPitchExecutionSigmaLogShift = v);
 
+            // 투구 위치(Heart·Shadow·Chase·Waste)가 타구 품질에 주는 영향 배율. 1 = 현실 근사, 크게 하면 캐주얼
+            LeagueConfig league = _duel.Config;
+            Row("Location fx x", "0.00", 0f, 3f, () => (float)league.LocationEffectScale, v => league.LocationEffectScale = v);
+
             // 프로토 조작 계수
             Row("Ball slow x", "0.00", 1f, 2.5f, () => t.FlightTimeScale, v => t.FlightTimeScale = v);
             Row("Perfect ms", "0", 5f, 80f, () => t.PerfectTimingMs, v => t.PerfectTimingMs = v);
@@ -404,6 +408,7 @@ namespace BaseballProto.UI
             m.MaxTimingSprayShiftDeg = defaults.MaxTimingSprayShiftDeg;
             m.MaxCursorLaunchAngleShiftDeg = defaults.MaxCursorLaunchAngleShiftDeg;
             m.MaxPitchExecutionSigmaLogShift = defaults.MaxPitchExecutionSigmaLogShift;
+            _duel.Config.LocationEffectScale = new LeagueConfig().LocationEffectScale;
             JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(new ProtoTuning()), _tuning);
         }
     }

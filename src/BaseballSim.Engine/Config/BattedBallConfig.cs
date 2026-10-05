@@ -71,6 +71,15 @@ namespace BaseballSim.Engine.Config
         /// <summary>투구 높이(존 중심 대비) 1 m당 발사각 변화</summary>
         public double LocationLaunchAngleDegPerM { get; set; } = 18.0;
 
+        /// <summary>
+        /// 투구 구역별 정타 로그 오즈 이동 (Heart, Shadow, Chase, Waste). LeagueConfig.LocationEffectScale을 곱해 적용.
+        /// 인플레이 타구의 구역 분포로 가중 평균하면 0 근처가 되도록 잡아 리그 전체 수준은 유지한다
+        /// </summary>
+        public RegionTable SolidLogitShiftByRegion { get; set; } = new RegionTable(0.35, -0.55, -0.60, -0.85);
+
+        /// <summary>투구 구역별 타구속도 이동 (km/h, Heart, Shadow, Chase, Waste). LocationEffectScale을 곱해 적용</summary>
+        public RegionTable ExitVelocityKmhByRegion { get; set; } = new RegionTable(5.0, -6.0, -6.0, -9.0);
+
         /// <summary>구종별 발사각 보정 (FF, SI, FC, SL, CU, CH, FS)</summary>
         public PitchTypeTable PitchTypeLaunchAngleOffsetDeg { get; set; } = new PitchTypeTable(2.0, -5.0, 0.0, -1.0, -2.0, -3.0, -4.0);
 

@@ -22,7 +22,8 @@ namespace BaseballSim.Engine.Config
                 // Statcast 2023 구역별 스윙률 근사: Heart 73%, Shadow 52%, Chase 24%, Waste 6%
                 SwingRateByPerceivedRegion = new RegionTable(0.80, 0.55, 0.19, 0.05),
                 // 구역별 컨택률 (Statcast 2023 근사에서 출발해 튜닝)
-                ContactRateByRegion = new RegionTable(0.91, 0.77, 0.40, 0.28),
+                // Heart 헛스윙 약 14%, Chase 약 45% (Statcast 근사)
+                ContactRateByRegion = new RegionTable(0.86, 0.77, 0.47, 0.30),
                 FoulRateByRegion = new RegionTable(0.46, 0.56, 0.58, 0.62),
                 SolidContactRate = 0.55,
                 // 원본 96.4 mph

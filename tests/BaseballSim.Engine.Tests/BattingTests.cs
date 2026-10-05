@@ -183,11 +183,63 @@ namespace BaseballSim.Engine.Tests
         [Fact]
         public void 정타확률_평균대결은_리그값()
         {
-            var gen = new BattedBallGenerator(_config);
-            Assert.Equal(_config.Environment.SolidContactRate,
+            // 투구 위치 효과를 끄면 평균 대결은 리그 기준값
+            LeagueConfig config = LeagueConfig.CreateDefault();
+            config.LocationEffectScale = 0;
+            var gen = new BattedBallGenerator(config);
+            Assert.Equal(config.Environment.SolidContactRate,
                 gen.SolidContactProbability(new BatterRatings(), Pitch(AttackRegion.Heart), false, null), 10);
             Assert.True(gen.SolidContactProbability(new BatterRatings { Contact = 70 }, Pitch(AttackRegion.Heart), false, null)
-                > _config.Environment.SolidContactRate);
+                > config.Environment.SolidContactRate);
+        }
+
+        [Fact]
+        public void 투구위치_한가운데일수록_정타확률과_타구속도가_높다()
+        {
+            var gen = new BattedBallGenerator(_config);
+            var batter = new BatterRatings();
+            double heart = gen.SolidContactProbability(batter, Pitch(AttackRegion.Heart), false, null);
+            double shadow = gen.SolidContactProbability(batter, Pitch(AttackRegion.Shadow), false, null);
+            double chase = gen.SolidContactProbability(batter, Pitch(AttackRegion.Chase), false, null);
+            double waste = gen.SolidContactProbability(batter, Pitch(AttackRegion.Waste), false, null);
+            Assert.True(heart > shadow && shadow > chase && chase > waste);
+
+            Assert.True(AverageExitVelocity(gen, AttackRegion.Heart) > AverageExitVelocity(gen, AttackRegion.Chase) + 8);
+        }
+
+        [Fact]
+        public void 투구위치_효과_배율()
+        {
+            var batter = new BatterRatings();
+            LeagueConfig off = LeagueConfig.CreateDefault();
+            off.LocationEffectScale = 0;
+            var genOff = new BattedBallGenerator(off);
+            Assert.Equal(genOff.SolidContactProbability(batter, Pitch(AttackRegion.Heart), false, null),
+                genOff.SolidContactProbability(batter, Pitch(AttackRegion.Chase), false, null), 10);
+            Assert.Equal(AverageExitVelocity(genOff, AttackRegion.Heart), AverageExitVelocity(genOff, AttackRegion.Chase), 6);
+
+            LeagueConfig strong = LeagueConfig.CreateDefault();
+            strong.LocationEffectScale = 2;
+            var genStrong = new BattedBallGenerator(strong);
+            var genNormal = new BattedBallGenerator(_config);
+            double gapNormal = genNormal.SolidContactProbability(batter, Pitch(AttackRegion.Heart), false, null)
+                - genNormal.SolidContactProbability(batter, Pitch(AttackRegion.Chase), false, null);
+            double gapStrong = genStrong.SolidContactProbability(batter, Pitch(AttackRegion.Heart), false, null)
+                - genStrong.SolidContactProbability(batter, Pitch(AttackRegion.Chase), false, null);
+            Assert.True(gapStrong > gapNormal);
+        }
+
+        private static double AverageExitVelocity(BattedBallGenerator gen, AttackRegion region)
+        {
+            var rng = new Pcg32Random(31);
+            double sum = 0;
+            const int n = 4000;
+            for (int i = 0; i < n; i++)
+            {
+                sum += gen.Generate(new BatterRatings(), Hand.Right, Pitch(region), false, null, rng).ExitVelocityKmh;
+            }
+
+            return sum / n;
         }
 
         [Fact]

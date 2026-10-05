@@ -33,7 +33,8 @@ namespace BaseballSim.Engine.Batting
             double pitcherRate = LogOdds.Logistic(LogOdds.Logit(league) - bc.StuffSolidBeta * pitch.EffectiveStuffZ);
             double p = OddsRatio.Log5(batterRate, pitcherRate, league);
 
-            double shift = 0;
+            // 투구 위치: 한가운데는 잘 맞고 존 밖은 빗맞는다
+            double shift = _config.LocationEffectScale * bc.SolidLogitShiftByRegion.Get(pitch.Region);
             if (sameHand)
             {
                 shift += _config.Platoon.SameHandSolidShift;
@@ -81,6 +82,9 @@ namespace BaseballSim.Engine.Batting
                     + bc.WeakPowerExitVelocityKmhPerSd * powerZ
                     + random.NextGaussian() * bc.WeakExitVelocitySdKmh;
             }
+
+            // 투구 위치에 따른 타구속도 보정
+            exitVelocity += _config.LocationEffectScale * bc.ExitVelocityKmhByRegion.Get(pitch.Region);
 
             // 투구 높이와 구종에 따른 발사각 보정
             launchAngle += bc.LocationLaunchAngleDegPerM * (pitch.Actual.Z - _config.StrikeZone.CenterHeightM);

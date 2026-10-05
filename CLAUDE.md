@@ -70,7 +70,10 @@
   - A: 상태 머신, 투구 판정(실행·인지·스윙·컨택), 타구 생성·비행, 물리 기반 수비·주루, 기본 AI, 검증 하네스
   - B: 도루·번트·폭투·포일·낫아웃, 고의4구, 대타·대주자·대수비, 불펜 역할(마무리·셋업)
   - C: 직접↔시뮬 전환, 멈춤 조건, 사람 감독 흐름, 저장/불러오기
-- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 92개 통과
+- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 94개 통과
+- 투구 위치 효과: 구역(Heart/Shadow/Chase/Waste)별 정타 로그 오즈·타구속도 보정 (`BattedBallConfig.SolidLogitShiftByRegion`,
+  `ExitVelocityKmhByRegion`), 전체 배율 `LeagueConfig.LocationEffectScale`(기본 1 = Statcast 근사, Unity TUNE에서 조절).
+  Standard 프리셋 구역별 컨택률은 Heart 헛스윙 약 13%, Chase 약 47%로 조정. 목표: Heart 타율 .300·장타율 .550 근처, Chase 타율 .150 근처
 - 2단계 진행 중: Unity 1:1 투타 대결 프로토타입 (`unity/BaseballProto`, Unity 6000.6.4f1, URP, 세로 고정)
   - 엔진 최소 확장: `BatterAction.TimingDirection`(이르면 당겨치기), `CursorVerticalOffset`(커서가 위면 발사각 낮게),
     상한은 `InputModifierConfig.MaxTimingSprayShiftDeg` / `MaxCursorLaunchAngleShiftDeg`. AI는 null(중립)이라 하네스 결과 불변

@@ -28,6 +28,12 @@ namespace BaseballSim.Engine.Config
         public SeasonConfig Season { get; set; } = new SeasonConfig();
         public InteractionConfig Interaction { get; set; } = new InteractionConfig();
 
+        /// <summary>
+        /// 투구 위치(구역)가 타구 품질(정타 확률·타구속도)에 주는 영향 전체 배율.
+        /// 0 = 영향 없음, 1 = 현실 기준(Statcast 근사), 1보다 크면 캐주얼하게 과장. 구역별 값은 BattedBallConfig
+        /// </summary>
+        public double LocationEffectScale { get; set; } = 1.0;
+
         public static LeagueConfig CreateDefault()
         {
             return new LeagueConfig();
