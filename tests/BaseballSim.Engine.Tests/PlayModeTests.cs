@@ -76,6 +76,34 @@ namespace BaseballSim.Engine.Tests
         }
 
         [Fact]
+        public void 타구_연출용_시각은_순서가_맞다()
+        {
+            GameEngine engine = AiEngine(31);
+            engine.RunUntil(StopConditions.EndOfGame);
+            int checkedBalls = 0;
+            foreach (GameEvent e in engine.State.Log)
+            {
+                if (!(e is PitchEvent p) || p.BattedBall == null || p.IsBunt
+                    || p.PlateAppearanceOutcome == PlateAppearanceOutcome.HomeRun)
+                {
+                    continue;
+                }
+
+                BattedBallData b = p.BattedBall;
+                Assert.True(b.FieldedTimeS > 0);
+                Assert.True(b.FielderArrivalS > 0);
+                if (b.HasLanding)
+                {
+                    Assert.True(b.LandingTimeS <= b.FieldedTimeS + 1e-9);
+                }
+
+                checkedBalls++;
+            }
+
+            Assert.True(checkedBalls > 20);
+        }
+
+        [Fact]
         public void 설정이_바뀌면_불일치를_알린다()
         {
             byte[] data = AiEngine(1).Save();

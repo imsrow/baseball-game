@@ -23,7 +23,10 @@ namespace BaseballSim.Engine.Persistence
     {
         // "BBSV" (파일 식별자)
         private const int Magic = 0x56534242;
-        private const int FormatVersion = 1;
+        private const int FormatVersion = 2;
+
+        /// <summary>읽을 수 있는 가장 오래된 형식 (v1: 타구 연출용 시각 없음)</summary>
+        private const int MinReadableVersion = 1;
 
         // 이벤트 종류 태그
         private const int PitchEventTag = 1;
@@ -60,11 +63,12 @@ namespace BaseballSim.Engine.Persistence
                 }
 
                 int version = r.Int();
-                if (version != FormatVersion)
+                if (version < MinReadableVersion || version > FormatVersion)
                 {
                     throw new SaveFormatException("지원하지 않는 저장 형식 버전입니다: " + version);
                 }
 
+                r.Version = version;
                 var saved = new SavedGame { ConfigMatches = r.ULong() == ConfigFingerprint.Compute(config) };
                 saved.Modes = ReadModes(r);
                 saved.TeamNames = ReadTeamNames(r);
@@ -614,6 +618,11 @@ namespace BaseballSim.Engine.Persistence
                 w.Int((int)b.Type);
                 w.Bool(b.IsSolid);
                 w.NullableInt(b.FieldedBy.HasValue ? (int)b.FieldedBy.Value : (int?)null);
+                w.Bool(b.HasLanding);
+                foreach (double v in new[] { b.LandingX, b.LandingY, b.LandingTimeS, b.FieldedTimeS, b.FielderArrivalS })
+                {
+                    w.Double(v);
+                }
             }
 
             w.NullableInt(e.PlateAppearanceOutcome.HasValue ? (int)e.PlateAppearanceOutcome.Value : (int?)null);
@@ -686,6 +695,16 @@ namespace BaseballSim.Engine.Persistence
                 };
                 int? fielder = r.NullableInt();
                 b.FieldedBy = fielder.HasValue ? (Position)fielder.Value : (Position?)null;
+                if (r.Version >= 2)
+                {
+                    b.HasLanding = r.Bool();
+                    b.LandingX = r.Double();
+                    b.LandingY = r.Double();
+                    b.LandingTimeS = r.Double();
+                    b.FieldedTimeS = r.Double();
+                    b.FielderArrivalS = r.Double();
+                }
+
                 e.BattedBall = b;
             }
 

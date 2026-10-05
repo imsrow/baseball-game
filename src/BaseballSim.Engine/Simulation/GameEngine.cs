@@ -1102,6 +1102,12 @@ namespace BaseballSim.Engine.Simulation
                 HangTimeS = play.HangTimeS,
                 DistanceM = play.Flight != null ? play.Flight.DistanceM : play.BallEndPoint.DistanceFromHome,
                 FieldedBy = play.FieldedBy,
+                HasLanding = play.LandingPoint.HasValue,
+                LandingX = play.LandingPoint?.X ?? 0,
+                LandingY = play.LandingPoint?.Y ?? 0,
+                LandingTimeS = play.LandingTimeS,
+                FieldedTimeS = play.FieldedTimeS,
+                FielderArrivalS = play.FielderArrivalS,
             };
         }
 

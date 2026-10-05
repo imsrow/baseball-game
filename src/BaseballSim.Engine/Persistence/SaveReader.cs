@@ -15,6 +15,9 @@ namespace BaseballSim.Engine.Persistence
             _reader = reader;
         }
 
+        /// <summary>읽고 있는 저장 형식 버전 (구버전 호환용)</summary>
+        public int Version { get; set; }
+
         public int Int() => _reader.ReadInt32();
 
         public ulong ULong() => _reader.ReadUInt64();

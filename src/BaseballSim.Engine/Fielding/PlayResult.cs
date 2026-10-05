@@ -33,6 +33,20 @@ namespace BaseballSim.Engine.Fielding
         /// <summary>체공시간 (땅볼은 0)</summary>
         public double HangTimeS { get; set; }
 
+        // ── 연출용 (판정에는 쓰지 않음) ──
+
+        /// <summary>뜬공이 잡히지 않고 땅·펜스에 처음 닿은 지점 (잡혔거나 땅볼·홈런이면 null)</summary>
+        public FieldPoint? LandingPoint { get; set; }
+
+        /// <summary>LandingPoint 도달 시각 (타구 순간 기준, s)</summary>
+        public double LandingTimeS { get; set; }
+
+        /// <summary>처리 야수가 공을 잡은(포구·땅볼 처리·외야 회수) 시각 (s). 홈런은 0</summary>
+        public double FieldedTimeS { get; set; }
+
+        /// <summary>처리 야수가 처리 지점에 도착할 수 있는 엔진 기준 시각 (반응 + 이동, s)</summary>
+        public double FielderArrivalS { get; set; }
+
         /// <summary>포스·타자 아웃으로 이닝이 끝나 득점이 무효가 됐는지</summary>
         public bool RunsNullified { get; set; }
 

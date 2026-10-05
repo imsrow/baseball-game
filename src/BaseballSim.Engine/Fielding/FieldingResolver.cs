@@ -62,6 +62,7 @@ namespace BaseballSim.Engine.Fielding
             {
                 ResolveHomeRun(situation, result);
                 result.BallEndPoint = flight.LandingPoint;
+                result.LandingTimeS = flight.LandingTimeS;
                 return result;
             }
 
@@ -76,6 +77,7 @@ namespace BaseballSim.Engine.Fielding
         {
             FielderProfile catcher = null;
             double catchProbability = 0;
+            double catcherTime = 0;
             // 펜스에 맞는 타구도 그 전에 포구 높이에 있으면 잡을 수 있다 (펜스 앞은 추가 시간)
             if (!flight.HitWall || flight.CatchAtWall)
             {
@@ -97,6 +99,7 @@ namespace BaseballSim.Engine.Fielding
                     {
                         catchProbability = p;
                         catcher = fielder;
+                        catcherTime = timeNeeded;
                     }
                 }
             }
@@ -105,6 +108,8 @@ namespace BaseballSim.Engine.Fielding
             {
                 result.FieldedBy = catcher.Position;
                 result.BallEndPoint = flight.CatchPoint;
+                result.FieldedTimeS = flight.CatchTimeS;
+                result.FielderArrivalS = catcherTime;
                 if (random.NextDouble() < _probabilities.AirBallError(catcher, 1.0 - catchProbability))
                 {
                     ReachedOnError(situation, result);
@@ -114,6 +119,9 @@ namespace BaseballSim.Engine.Fielding
                 ResolveCaughtAirBall(ball, flight, catcher, situation, result, random);
                 return;
             }
+
+            result.LandingPoint = flight.LandingPoint;
+            result.LandingTimeS = flight.LandingTimeS;
 
             // 내야에 떨어진 타구는 땅볼처럼 계속 굴러간다
             if (!flight.HitWall && flight.LandingPoint.DistanceFromHome < _fc.InfieldInterceptLimitM)
@@ -139,6 +147,8 @@ namespace BaseballSim.Engine.Fielding
 
             result.FieldedBy = retrieval.Fielder.Position;
             result.BallEndPoint = retrieval.Point;
+            result.FieldedTimeS = retrieval.BallTimeS;
+            result.FielderArrivalS = retrieval.Fielder.TimeToReach(retrieval.Point);
             bool delayed = situation.OutsBefore < _config.Rules.OutsPerHalfInning - 1;
             HitAdvanceOutcome advance = _hitAdvancement.Resolve(situation, retrieval.Fielder, retrieval.Point,
                 retrieval.BallTimeS, delayed, result, random);
@@ -328,6 +338,8 @@ namespace BaseballSim.Engine.Fielding
             GroundIntercept outfield = RetrieveRollingBall(path, outfielders, path.DirectionDeg, random);
             result.FieldedBy = outfield.Fielder.Position;
             result.BallEndPoint = outfield.Point;
+            result.FieldedTimeS = outfield.BallTimeS;
+            result.FielderArrivalS = outfield.Fielder.TimeToReach(outfield.Point);
             HitAdvanceOutcome advance = _hitAdvancement.Resolve(situation, outfield.Fielder, outfield.Point,
                 outfield.BallTimeS, false, result, random);
             result.Outcome = HitOutcome(advance.BatterSafeBase);
@@ -431,6 +443,8 @@ namespace BaseballSim.Engine.Fielding
             double difficulty = Math.Max(0, Math.Min(1, 1.0 - intercept.MarginS / _fc.DifficultPlayWindowS));
             result.FieldedBy = fielder.Position;
             result.BallEndPoint = point;
+            result.FieldedTimeS = intercept.BallTimeS;
+            result.FielderArrivalS = fielder.TimeToReach(point);
 
             if (random.NextDouble() < _probabilities.GroundBallError(fielder, difficulty))
             {
