@@ -401,15 +401,17 @@ namespace BaseballProto.UI
 
         private void ResetTuning()
         {
+            JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(new ProtoTuning()), _tuning);
             var defaults = new InputModifierConfig();
             InputModifierConfig m = _duel.Config.InputModifier;
-            m.MaxSwingContactLogitShift = defaults.MaxSwingContactLogitShift;
-            m.MaxSwingSolidLogitShift = defaults.MaxSwingSolidLogitShift;
+
+            // 타격 조작 상한은 Unity 기본값, 나머지는 엔진 기본값으로
+            m.MaxSwingContactLogitShift = _tuning.SwingContactLogitCap;
+            m.MaxSwingSolidLogitShift = _tuning.SwingSolidLogitCap;
             m.MaxTimingSprayShiftDeg = defaults.MaxTimingSprayShiftDeg;
             m.MaxCursorLaunchAngleShiftDeg = defaults.MaxCursorLaunchAngleShiftDeg;
             m.MaxPitchExecutionSigmaLogShift = defaults.MaxPitchExecutionSigmaLogShift;
             _duel.Config.LocationEffectScale = new LeagueConfig().LocationEffectScale;
-            JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(new ProtoTuning()), _tuning);
         }
     }
 }

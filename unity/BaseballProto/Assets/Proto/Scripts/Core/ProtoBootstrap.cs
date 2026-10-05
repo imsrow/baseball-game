@@ -69,6 +69,10 @@ namespace BaseballProto.Core
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
             _config = new LeagueConfig();
+
+            // 타격 조작 보정 상한은 Unity 기본값으로 (엔진 기본값은 하네스 기준이라 그대로 둔다)
+            _config.InputModifier.MaxSwingContactLogitShift = _tuning.SwingContactLogitCap;
+            _config.InputModifier.MaxSwingSolidLogitShift = _tuning.SwingSolidLogitCap;
             _clock = new PresentationClock();
 
             Camera camera = CreateCamera();

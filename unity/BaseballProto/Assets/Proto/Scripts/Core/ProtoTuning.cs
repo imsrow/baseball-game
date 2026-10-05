@@ -70,6 +70,13 @@ namespace BaseballProto.Core
         /// <summary>공 도달 후 이 시간까지 스윙 입력이 없으면 지켜봄(Take)</summary>
         public float LateCutoffMs = 120f;
 
+        [Header("타격: 엔진 보정 상한 (Unity 기본값, 엔진 기본값 0.4와 별개)")]
+        /// <summary>타격 조작(TimingQuality ±1)이 컨택 로그 오즈에 주는 최대 보정. 손맛을 위해 엔진 기본보다 크게</summary>
+        public float SwingContactLogitCap = 1.0f;
+
+        /// <summary>타격 조작(TimingQuality ±1)이 정타 로그 오즈에 주는 최대 보정</summary>
+        public float SwingSolidLogitCap = 1.0f;
+
         [Header("타격: 품질 합산")]
         /// <summary>TimingQuality 가중 평균에서 타이밍 점수 비중 (커서 점수 비중 = 1 − 이 값)</summary>
         public float TimingWeight = 0.6f;
