@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <!-- 모바일: 화면 전체, 확대 금지, 노치 영역까지 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- iOS 홈 화면 앱 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="BaseballProto">
+    <link rel="apple-touch-icon" href="TemplateData/icons/icon-180.png">
+    <title>BaseballProto</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+    <link rel="manifest" href="manifest.webmanifest">
+  </head>
+  <body>
+    <div id="unity-container">
+      <div id="unity-fullscreen-container">
+        <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
+        <div id="unity-loading-container">
+          <div id="unity-loading-bar">
+            <div id="unity-logo"></div>
+            <div id="unity-progress-bar-empty">
+              <div id="unity-progress-bar-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="unity-warning"> </div>
+    </div>
+    <script>
+      window.addEventListener("load", function () {
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.register("ServiceWorker.js");
+        }
+      });
+
+      // iOS 사파리: 핀치 확대·더블탭 확대·스크롤 튕김·길게 눌러 메뉴 막기 (게임 입력은 캔버스 터치로만)
+      document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
+      document.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
+      document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+      var container = document.querySelector("#unity-container");
+      var canvas = document.querySelector("#unity-canvas");
+      var loadingContainer = document.querySelector("#unity-loading-container");
+      var progressBarFull = document.querySelector("#unity-progress-bar-full");
+      var warningBanner = document.querySelector("#unity-warning");
+
+      function unityShowBanner(msg, type) {
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/48a506cb5e7918beab5ea08e93352779.loader.js";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/a6e0d2ce5e7ee75e57ad500409c820d6.data.unityweb",
+        frameworkUrl: buildUrl + "/d25ba467e7a56ff6ad92506c6c01d2e2.framework.js.unityweb",
+        codeUrl: buildUrl + "/ac5356db8477b8625e0e111603726043.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        fullscreenElementID: "unity-fullscreen-container",
+        companyName: "DefaultCompany",
+        productName: "BaseballProto",
+        productVersion: "0.1.0",
+        showBanner: unityShowBanner,
+        // 아이폰(배율 3)에서 렌더 해상도가 과도해지지 않게 상한 2
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      };
+
+
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          if (progress < 1) {
+            loadingContainer.style.display = "block";
+            progressBarFull.style.width = 100 * progress + "%";
+          } else {
+            loadingContainer.style.display = "none";
+          }
+        }).then((unityInstance) => {
+        }).catch((message) => {
+          alert(message);
+        });
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
