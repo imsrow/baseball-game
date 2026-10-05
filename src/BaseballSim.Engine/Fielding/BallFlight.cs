@@ -20,13 +20,17 @@ namespace BaseballSim.Engine.Fielding
             _environment = environment;
         }
 
-        public FlightResult Simulate(double exitVelocityKmh, double launchAngleDeg, double sprayDeg)
+        /// <param name="liftMultiplier">양력 배율 (빗맞은 뜬공의 많은 백스핀 등)</param>
+        /// <param name="carryMultiplier">타구별 비거리 편차 (항력을 이 값으로 나눔, 1 = 기본)</param>
+        public FlightResult Simulate(double exitVelocityKmh, double launchAngleDeg, double sprayDeg,
+            double liftMultiplier = 1.0, double carryMultiplier = 1.0)
         {
             BallPhysicsConfig p = _physics;
             double area = Math.PI * p.RadiusM * p.RadiusM;
-            double dragK = 0.5 * p.AirDensity * p.DragCoefficient * area / p.MassKg / _environment.CarryFactor;
-            double liftCoefficient = launchAngleDeg > 0
-                ? p.LiftCoefficientMax * Math.Min(1.0, launchAngleDeg / p.LiftRampDeg)
+            double dragK = 0.5 * p.AirDensity * p.DragCoefficient * area / p.MassKg / (_environment.CarryFactor * carryMultiplier);
+            double liftCoefficient = launchAngleDeg > p.LiftStartDeg
+                ? p.LiftCoefficientMax * Math.Min(1.0, (launchAngleDeg - p.LiftStartDeg) / (p.LiftRampDeg - p.LiftStartDeg))
+                    * liftMultiplier
                 : 0.0;
             double liftK = 0.5 * p.AirDensity * liftCoefficient * area / p.MassKg;
 
@@ -80,8 +84,10 @@ namespace BaseballSim.Engine.Fielding
                         result.LandingHorizontalSpeedMps = 0;
                         if (!catchSet)
                         {
+                            // 펜스 앞에서 뛰어올라 잡을 수 있는 높이
                             result.CatchPoint = wall;
                             result.CatchTimeS = timeAtFence;
+                            result.CatchAtWall = true;
                         }
 
                         result.ApexM = apex;

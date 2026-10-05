@@ -66,6 +66,18 @@ namespace BaseballSim.Engine.Fielding
             return ReactionTimeS + distance / SpeedMps;
         }
 
+        /// <summary>뜬공 추격 이동 속도. 내야수는 땅볼 횡이동보다 빠르게 달린다</summary>
+        public double AirBallSpeedMps => IsOutfielder
+            ? SpeedMps
+            : _config.InfieldAirBallSpeedMps + _config.InfieldSpeedMpsPerSd * ScoutScale.ToZ(Range);
+
+        /// <summary>기본 위치에서 뜬공 포구 지점까지 도달 시간 (반응 + 이동, 손이 닿는 거리 제외)</summary>
+        public double TimeToReachAirBall(FieldPoint point)
+        {
+            double distance = Math.Max(0, FieldPoint.Distance(Start, point) - ReachM);
+            return ReactionTimeS + distance / AirBallSpeedMps;
+        }
+
         /// <summary>지점에서 목표까지 송구 비행 시간</summary>
         public double ThrowTime(FieldPoint from, FieldPoint to)
         {

@@ -8,10 +8,10 @@ namespace BaseballSim.Engine.Config
         // ── 반응·이동 ──
 
         public double InfieldReactionS { get; set; } = 0.30;
-        public double OutfieldReactionS { get; set; } = 1.00;
+        public double OutfieldReactionS { get; set; } = 1.20;
 
         /// <summary>외야수는 라인드라이브 궤적 판단이 어려워 첫 반응이 더 늦다</summary>
-        public double OutfieldLineDriveExtraReactionS { get; set; } = 0.30;
+        public double OutfieldLineDriveExtraReactionS { get; set; } = 0.35;
 
         /// <summary>투수는 투구 동작을 마무리하느라 추가로 늦는다</summary>
         public double PitcherExtraReactionS { get; set; } = 0.25;
@@ -25,6 +25,12 @@ namespace BaseballSim.Engine.Config
         /// <summary>내야수 횡이동 평균 속도 (가속 포함, m/s)</summary>
         public double InfieldSpeedMps { get; set; } = 4.2;
 
+        /// <summary>
+        /// 내야수가 뜬공을 쫓아 달릴 때 평균 속도 (m/s). 땅볼 횡이동(InfieldSpeedMps)보다 빠르다.
+        /// 내야와 외야 사이에 뜬 짧은 뜬공 처리
+        /// </summary>
+        public double InfieldAirBallSpeedMps { get; set; } = 6.5;
+
         /// <summary>외야수 평균 이동 속도 (가속 포함, m/s). 최고 속도 원본 27 ft/s(8.2 m/s)보다 낮게 둔다</summary>
         public double OutfieldSpeedMps { get; set; } = 7.9;
 
@@ -37,6 +43,9 @@ namespace BaseballSim.Engine.Config
         /// <summary>제자리에서 손이 닿는 거리 (팔·다이빙 포함)</summary>
         public double InfieldReachM { get; set; } = 1.5;
         public double OutfieldReachM { get; set; } = 1.4;
+
+        /// <summary>펜스 앞 포구: 펜스 위치 확인·점프 때문에 더 걸리는 시간</summary>
+        public double WallCatchExtraS { get; set; } = 0.50;
 
         /// <summary>뜬공 포구 확률 = logistic(시간 여유 / 이 값)</summary>
         public double CatchProbabilityScaleS { get; set; } = 0.25;

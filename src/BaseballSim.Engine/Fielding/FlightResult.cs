@@ -11,6 +11,9 @@ namespace BaseballSim.Engine.Fielding
         /// <summary>펜스에 맞음 (넘기지 못함)</summary>
         public bool HitWall { get; set; }
 
+        /// <summary>포구 지점이 펜스 바로 앞 (펜스에 맞기 전 포구 높이 위에 있음)</summary>
+        public bool CatchAtWall { get; set; }
+
         /// <summary>야수가 잡을 수 있는 높이로 내려오는 지점</summary>
         public FieldPoint CatchPoint { get; set; }
 

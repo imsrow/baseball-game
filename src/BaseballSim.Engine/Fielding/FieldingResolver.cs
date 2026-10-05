@@ -51,7 +51,11 @@ namespace BaseballSim.Engine.Fielding
                 return result;
             }
 
-            FlightResult flight = _flight.Simulate(ball.ExitVelocityKmh, ball.LaunchAngleDeg, ball.SprayAngleDeg);
+            BallPhysicsConfig physics = _config.Physics;
+            double lift = ball.IsSolid ? 1.0 : physics.WeakContactLiftMultiplier;
+            double carry = Math.Max(physics.CarryNoiseMin,
+                Math.Min(physics.CarryNoiseMax, 1.0 + random.NextGaussian() * physics.CarryNoiseSd));
+            FlightResult flight = _flight.Simulate(ball.ExitVelocityKmh, ball.LaunchAngleDeg, ball.SprayAngleDeg, lift, carry);
             result.Flight = flight;
             result.HangTimeS = flight.CatchTimeS;
             if (flight.IsHomeRun)
@@ -72,14 +76,20 @@ namespace BaseballSim.Engine.Fielding
         {
             FielderProfile catcher = null;
             double catchProbability = 0;
-            if (!flight.HitWall)
+            // 펜스에 맞는 타구도 그 전에 포구 높이에 있으면 잡을 수 있다 (펜스 앞은 추가 시간)
+            if (!flight.HitWall || flight.CatchAtWall)
             {
                 foreach (FielderProfile fielder in situation.Defense.All)
                 {
-                    double timeNeeded = fielder.TimeToReach(flight.CatchPoint);
+                    double timeNeeded = fielder.TimeToReachAirBall(flight.CatchPoint);
                     if (fielder.IsOutfielder && ball.Type == BattedBallType.LineDrive)
                     {
                         timeNeeded += _fc.OutfieldLineDriveExtraReactionS;
+                    }
+
+                    if (flight.CatchAtWall)
+                    {
+                        timeNeeded += _fc.WallCatchExtraS;
                     }
 
                     double p = LogOdds.Logistic((flight.CatchTimeS - timeNeeded) / _fc.CatchProbabilityScaleS);

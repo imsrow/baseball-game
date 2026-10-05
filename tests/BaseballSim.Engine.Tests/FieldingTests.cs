@@ -44,6 +44,24 @@ namespace BaseballSim.Engine.Tests
         }
 
         [Fact]
+        public void 라인드라이브는_낮게_깔린다()
+        {
+            // 100 mph, 15도 라이너: 외야수 앞(약 85 m 이내)에 2.5초 안에 떨어진다
+            FlightResult f = Flight().Simulate(UnitConversion.MphToKmh(100), 15, 0);
+            Assert.True(f.DistanceM < 85);
+            Assert.True(f.CatchTimeS < 2.5);
+        }
+
+        [Fact]
+        public void 빗맞은_뜬공은_더_오래_뜬다()
+        {
+            double weakLift = _config.Physics.WeakContactLiftMultiplier;
+            FlightResult normal = Flight().Simulate(115, 30, 0);
+            FlightResult weak = Flight().Simulate(115, 30, 0, weakLift);
+            Assert.True(weak.CatchTimeS > normal.CatchTimeS);
+        }
+
+        [Fact]
         public void 땅볼경로_멈춤과_시간()
         {
             var path = new GroundPath(new FieldPoint(0, 0), 0, 0, 20, 4);
