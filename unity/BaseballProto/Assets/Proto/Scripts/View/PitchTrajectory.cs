@@ -7,14 +7,12 @@ namespace BaseballProto.View
 {
     /// <summary>
     /// 투구 궤적 (연출). 도달 시각·도달 위치는 판정 기준이므로 정확히 지킨다.
-    /// 휘는 모양은 (u − u³) 곡선으로, 처음엔 반대쪽에 있다가 끝에서 꺾여 들어오게 보인다.
+    /// 휘는 모양은 중력처럼 일정한 힘을 받는 곡선: 휘지 않았을 직선에서 벗어난 양이 u²로 커진다.
+    /// 끝에서 갑자기 꺾이지 않고 중반부터 점점 휘어 들어온다. u = 1에서 정확히 도달 위치.
     /// </summary>
     public sealed class PitchTrajectory
     {
         private const float KmhToMs = 1f / 3.6f;
-
-        // (u − u³)의 최댓값(≈0.385)을 1로 맞추는 배율
-        private const float BreakShapeNormalizer = 2.6f;
 
         private readonly Vector3 _start;
         private readonly Vector3 _end;
@@ -61,10 +59,10 @@ namespace BaseballProto.View
 
             if (u <= 1f)
             {
-                Vector3 line = Vector3.Lerp(_start, _end, u);
+                // 휘지 않았다면 (도달 위치 − 휨)으로 갔을 직선에, 휨을 u²만큼 더한다
+                Vector3 line = Vector3.Lerp(_start, _end - _breakOffset, u);
                 float arc = 4f * u * (1f - u) * _arcHeight;
-                float bend = (u - u * u * u) * BreakShapeNormalizer;
-                return line + Vector3.up * arc - _breakOffset * bend;
+                return line + Vector3.up * arc + _breakOffset * (u * u);
             }
 
             // 홈플레이트 통과 후 포수 미트까지

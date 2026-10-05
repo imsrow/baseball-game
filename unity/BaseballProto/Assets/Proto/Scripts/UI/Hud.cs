@@ -393,6 +393,8 @@ namespace BaseballProto.UI
             Add(Toggle(new Rect(x, y, width, FxRowHeight), "Sound", s.Sound, () => s.Sound = !s.Sound));
             Add(Toggle(new Rect(x, y, width, FxRowHeight), "Hit stop", s.HitStop, () => s.HitStop = !s.HitStop));
             Add(Toggle(new Rect(x, y, width, FxRowHeight), "Screen shake", s.Shake, () => s.Shake = !s.Shake));
+            Add(Toggle(new Rect(x, y, width, FxRowHeight), "Ball shadow", _tuning.BallShadow,
+                () => _tuning.BallShadow = !_tuning.BallShadow));
             Add(Toggle(new Rect(x, y, width, FxRowHeight), "Cursor log (csv)", _trace.Enabled,
                 () => _trace.SetEnabled(!_trace.Enabled)));
             PanelRect = new Rect(0f, panelTop - 6f, x + width + Margin, y - panelTop + 12f);

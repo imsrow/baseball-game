@@ -19,6 +19,11 @@ namespace BaseballProto.View
         public static readonly Color Cursor = new Color(1f, 0.85f, 0.1f);
         public static readonly Color CursorTap = new Color(0.2f, 1f, 0.9f);
         public static readonly Color CursorHold = new Color(1f, 0.5f, 0.1f);
+
+        /// <summary>홀드 모드에서 커서가 존 밖(떼면 스윙 취소)일 때</summary>
+        public static readonly Color CursorTake = new Color(0.6f, 0.6f, 0.65f);
+
+        public static readonly Color BallShadow = new Color(0.16f, 0.12f, 0.09f);
         public static readonly Color Target = new Color(1f, 0.25f, 0.25f);
         public static readonly Color Actual = new Color(0.2f, 0.9f, 1f);
     }

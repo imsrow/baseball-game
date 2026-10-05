@@ -33,6 +33,7 @@ namespace BaseballProto.Core
         private BatView _bat;
         private BattedBallFlight _flight;
         private RingView _cursorRing;
+        private BallView _ball;
         private BattingInput _batting;
         private PitchingInput _pitching;
         private DuelController _duel;
@@ -83,7 +84,8 @@ namespace BaseballProto.Core
             _field = new FieldView(root, camera, _config.StrikeZone, _tuning);
             _shake = new CameraShake(camera.transform);
 
-            var ball = new BallView(root, _tuning.BallVisualDiameterM);
+            var ball = new BallView(root, _tuning.BallVisualDiameterM, _tuning.BallShadowDiameterM);
+            _ball = ball;
             _bat = new BatView(root);
             _flight = new BattedBallFlight(ball, _tuning);
             _cursorRing = new RingView(root, "Cursor", _tuning.CursorRadiusM, ProtoColors.Cursor);
@@ -101,8 +103,8 @@ namespace BaseballProto.Core
             _trace = new CursorTrace();
             _trace.SetEnabled(Application.isEditor);
             _touch = new TouchHub();
-            _batting = new BattingInput(_tuning, mapper, screen => _hud != null && _hud.IsOnSwingButton(screen),
-                screen => _hud == null || _hud.IsInDragArea(screen));
+            _batting = new BattingInput(_tuning, _config.StrikeZone, mapper,
+                screen => _hud != null && _hud.IsOnSwingButton(screen), screen => _hud == null || _hud.IsInDragArea(screen));
             _pitching = new PitchingInput(_tuning, mapper);
             _duel = new DuelController(this, _config, _tuning, _field, ball, _bat, _flight, targetRing, actualRing, _batting,
                 _pitching, impact);
@@ -169,6 +171,7 @@ namespace BaseballProto.Core
                 }
             }
 
+            _ball.ShadowEnabled = _tuning.BallShadow;
             _clock.Tick(dt);
             _shake.Tick(dt);
             _bat.Tick(_clock.DeltaTime);
@@ -270,8 +273,12 @@ namespace BaseballProto.Core
             }
 
             _cursorRing.SetRadius(_tuning.CursorRadiusM);
-            // 홀드 모드에서 누르고 있으면 주황: 손을 떼면 스윙된다는 표시
-            _cursorRing.SetColor(tap ? ProtoColors.CursorTap : _batting.Holding ? ProtoColors.CursorHold : ProtoColors.Cursor);
+            // 홀드 모드에서 누르고 있으면 주황: 손을 떼면 스윙된다는 표시. 존 밖이면 회색: 떼면 스윙 취소
+            Color color = tap ? ProtoColors.CursorTap
+                : _batting.InTakeArea ? ProtoColors.CursorTake
+                : _batting.Holding ? ProtoColors.CursorHold
+                : ProtoColors.Cursor;
+            _cursorRing.SetColor(color);
             _cursorRing.Show(_batting.Cursor);
         }
 

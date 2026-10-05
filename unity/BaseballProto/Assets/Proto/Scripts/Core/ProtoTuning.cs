@@ -51,6 +51,11 @@ namespace BaseballProto.Core
         public float MittDepthM = 0.9f;
         public float BallVisualDiameterM = 0.1f;
 
+        /// <summary>공 바로 아래 바닥 그림자 (깊이·타이밍 단서). FX 패널에서 켜고 끈다</summary>
+        public bool BallShadow = true;
+
+        public float BallShadowDiameterM = 0.12f;
+
         [Header("타격: 타이밍")]
         /// <summary>이 오차 이내면 타이밍 점수 1</summary>
         public float PerfectTimingMs = 25f;
@@ -102,6 +107,9 @@ namespace BaseballProto.Core
         public float CursorLimitXM = 0.5f;
         public float CursorMinZM = 0.25f;
         public float CursorMaxZM = 1.3f;
+
+        /// <summary>홀드 모드: 커서 중심이 스트라이크 존 테두리에서 이만큼 더 밖에 있을 때 손을 떼면 스윙 취소(지켜봄)</summary>
+        public float HoldTakeMarginM = 0.10f;
 
         [Header("타격: 디버그")]
         /// <summary>HUD 평균 타이밍·커서 오차를 낼 최근 스윙 개수 (쏠림 확인용)</summary>

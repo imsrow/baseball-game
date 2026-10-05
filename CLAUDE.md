@@ -78,6 +78,9 @@
 - 2단계 진행 중: Unity 1:1 투타 대결 프로토타입 (`unity/BaseballProto`, Unity 6000.6.4f1, URP, 세로 고정)
   - 엔진 최소 확장: `BatterAction.TimingDirection`(이르면 당겨치기), `CursorVerticalOffset`(커서가 위면 발사각 낮게),
     상한은 `InputModifierConfig.MaxTimingSprayShiftDeg` / `MaxCursorLaunchAngleShiftDeg`. AI는 null(중립)이라 하네스 결과 불변
+  - 홀드 조작: 커서를 존 밖(테두리 + `ProtoTuning.HoldTakeMarginM`)에서 떼면 스윙 취소(회색 커서) = 볼을 참는 방법
+  - 투구 연출: 휨은 u²(중력처럼 점점), 공 바로 아래 바닥 그림자(FX에서 끄기). 포수 뒤 근접 카메라라 공이 마지막 약 50ms에
+    화면상 크게 떨어져 보이고, 그 전엔 존 위쪽에 떠 보여 이르게·높게 치는 쏠림이 생긴다 (디버그의 최근 10스윙 평균으로 확인)
 
 ## 나중에 할 일
 

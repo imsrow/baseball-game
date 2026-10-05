@@ -150,7 +150,7 @@ namespace BaseballProto.UI
         {
             switch (mode)
             {
-                case BattingControlMode.HoldRelease: return "Hold & drag: aim, release: swing";
+                case BattingControlMode.HoldRelease: return "Hold & drag: aim, release: swing (gray = take)";
                 case BattingControlMode.TapToSwing: return "Tap where & when the ball crosses";
                 default: return "Drag pad: aim, SWING: hit (Space)";
             }
