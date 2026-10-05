@@ -18,9 +18,11 @@ namespace BaseballProto.UI
         private static readonly Color BarBackColor = new Color(1f, 1f, 1f, 0.2f);
         private static readonly Color BarFillColor = new Color(1f, 0.8f, 0.2f, 0.9f);
         private static readonly Color SweetColor = new Color(0.2f, 1f, 0.3f, 0.6f);
+        private static readonly Color PadColor = new Color(1f, 1f, 1f, 0.12f);
+        private static readonly Color StatsColor = new Color(0.6f, 1f, 0.7f);
 
-        private const float DebugTop = 150f;
         private const float DebugLineHeight = 26f;
+        private const float DebugLineHeightLandscape = 22f;
 
         private readonly Texture2D _white;
         private GUIStyle _label;
@@ -40,21 +42,28 @@ namespace BaseballProto.UI
             EnsureStyles();
             DuelController duel = hud.Duel;
             float w = UiScale.Width;
-            float h = UiScale.Height;
 
-            // 상단 상태
-            Label(new Rect(10f, 80f, w - 20f, 34f), ResultText.Scoreboard(duel.Engine?.State), 24, _label);
-            Label(new Rect(10f, 112f, w - 20f, 30f), duel.Matchup, 20, _label);
+            // 상단 상태: 점수판, 대결, 이번 경기 성적
+            Rect info = hud.InfoRect;
+            Label(new Rect(info.x, info.y, info.width, 32f), ResultText.Scoreboard(duel.Engine?.State), 24, _label);
+            Label(new Rect(info.x, info.y + 30f, info.width, 28f), duel.Matchup, 20, _label);
+            string who = duel.Mode == DuelMode.Batting ? "YOU (bat): " : "AI vs YOU: ";
+            Color previous = _label.normal.textColor;
+            _label.normal.textColor = StatsColor;
+            Label(new Rect(info.x, info.y + 58f, info.width, 30f), who + duel.Stats, 21, _label);
+            _label.normal.textColor = previous;
 
             // 디버그 (패널이 열려 있으면 가림)
             if (!hud.PanelRect.HasValue)
             {
                 List<string> lines = DebugReadout.Build(duel, inputLagMs, fps);
-                var panel = new Rect(6f, DebugTop - 4f, w - 12f, lines.Count * DebugLineHeight + 8f);
-                Fill(panel, PanelColor);
+                Rect d = hud.DebugRect;
+                float lineH = hud.Landscape ? DebugLineHeightLandscape : DebugLineHeight;
+                float fontSize = hud.Landscape ? 16f : 18f;
+                Fill(new Rect(d.x - 4f, d.y - 4f, d.width + 8f, lines.Count * lineH + 8f), PanelColor);
                 for (int i = 0; i < lines.Count; i++)
                 {
-                    Label(new Rect(12f, DebugTop + i * DebugLineHeight, w - 24f, DebugLineHeight), lines[i], 18, _label);
+                    Label(new Rect(d.x + 2f, d.y + i * lineH, d.width - 4f, lineH), lines[i], fontSize, _label);
                 }
             }
             else
@@ -65,7 +74,7 @@ namespace BaseballProto.UI
             // 결과 문구
             if (ProtoClock.Now < duel.HeadlineUntil && !string.IsNullOrEmpty(duel.Headline))
             {
-                Label(new Rect(0f, h * 0.36f, w, 90f), duel.Headline, 56, _headline);
+                Label(new Rect(0f, hud.HeadlineY, w, 90f), duel.Headline, 56, _headline);
             }
 
             foreach (UiSlider slider in hud.Sliders)
@@ -82,13 +91,19 @@ namespace BaseballProto.UI
                 Label(button.Rect, button.Label, 22, _center);
             }
 
+            if (hud.DragPadVisible)
+            {
+                Fill(hud.DragPadRect, PadColor);
+                Label(hud.DragPadRect, "DRAG", 30, _center);
+            }
+
             if (hud.SwingButtonVisible)
             {
                 Fill(hud.SwingButtonRect, SwingColor);
                 Label(hud.SwingButtonRect, "SWING", 36, _center);
             }
 
-            DrawHint(hud, w, h);
+            DrawHint(hud);
             if (hud.GaugeVisible)
             {
                 DrawGauge(hud);
@@ -107,14 +122,16 @@ namespace BaseballProto.UI
             Label(new Rect(0f, h * 0.40f + 140f, w, 40f), "(iPhone silent switch mutes web audio)", 20, _center);
         }
 
-        private void DrawHint(Hud hud, float w, float h)
+        private void DrawHint(Hud hud)
         {
             string hint;
-            if (hud.Duel.Mode == DuelMode.Batting)
+            if (hud.Duel.AwaitingReady)
             {
-                hint = hud.Batting.Mode == BattingControlMode.DragCursor
-                    ? "Drag: move cursor   SWING: hit (Space)"
-                    : "Tap where & when the ball crosses";
+                hint = "START or tap: next pitch";
+            }
+            else if (hud.Duel.Mode == DuelMode.Batting)
+            {
+                hint = HintFor(hud.Batting.Mode);
             }
             else
             {
@@ -126,13 +143,17 @@ namespace BaseballProto.UI
                 }
             }
 
-            float bottom = hud.SwingButtonVisible ? hud.SwingButtonRect.y - 40f : h - 30f;
-            if (hud.GaugeVisible)
-            {
-                bottom = hud.GaugeRect.y - 44f;
-            }
+            Label(hud.HintRect, hint, 22, _label);
+        }
 
-            Label(new Rect(10f, bottom, w - 20f, 34f), hint, 22, _label);
+        private static string HintFor(BattingControlMode mode)
+        {
+            switch (mode)
+            {
+                case BattingControlMode.HoldRelease: return "Hold & drag: aim, release: swing";
+                case BattingControlMode.TapToSwing: return "Tap where & when the ball crosses";
+                default: return "Drag pad: aim, SWING: hit (Space)";
+            }
         }
 
         private void DrawGauge(Hud hud)

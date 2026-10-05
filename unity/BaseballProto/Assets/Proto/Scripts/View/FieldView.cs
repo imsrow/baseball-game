@@ -65,14 +65,19 @@ namespace BaseballProto.View
             _pitcher.transform.localPosition = new Vector3(side, p.y, p.z);
         }
 
-        /// <summary>화면 비율에 맞춰 홈플레이트 폭이 화면 가로에 들어오도록 FOV를 정한다</summary>
+        /// <summary>
+        /// 화면 비율에 맞춰 FOV를 정한다. 홈플레이트 위치에서 폭(PlateViewWidthM)과 높이(PlateViewHeightM)가 모두 들어오게:
+        /// 세로 화면은 폭에 맞춰지고, 가로 화면은 높이에 맞춰져 좌우 시야가 넓어진다.
+        /// </summary>
         public void ApplyCamera()
         {
             Camera.transform.localPosition = new Vector3(0f, _tuning.CameraHeightM, -_tuning.CameraBackM);
-            Camera.transform.LookAt(new Vector3(0f, _tuning.CameraLookHeightM, _tuning.CameraLookAheadM));
+            float lookHeight = Camera.aspect > 1f ? _tuning.CameraLookHeightLandscapeM : _tuning.CameraLookHeightM;
+            Camera.transform.LookAt(new Vector3(0f, lookHeight, _tuning.CameraLookAheadM));
             float horizontalFov = 2f * Mathf.Atan(_tuning.PlateViewWidthM * 0.5f / _tuning.CameraBackM) * Mathf.Rad2Deg;
-            float vertical = Camera.HorizontalToVerticalFieldOfView(horizontalFov, Mathf.Max(0.1f, Camera.aspect));
-            Camera.fieldOfView = Mathf.Max(_tuning.MinVerticalFovDeg, vertical);
+            float fromWidth = Camera.HorizontalToVerticalFieldOfView(horizontalFov, Mathf.Max(0.1f, Camera.aspect));
+            float fromHeight = 2f * Mathf.Atan(_tuning.PlateViewHeightM * 0.5f / _tuning.CameraBackM) * Mathf.Rad2Deg;
+            Camera.fieldOfView = Mathf.Max(_tuning.MinVerticalFovDeg, Mathf.Max(fromWidth, fromHeight));
         }
 
         private static void BuildZoneFrame(Transform root, StrikeZoneConfig zone)

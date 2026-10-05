@@ -156,8 +156,8 @@ MonoBehaviour:
     CameraLookAheadM: 8
     PlateViewWidthM: 1.5
     MinVerticalFovDeg: 30
-    WindupS: 0.9
-    WindupJitterS: 0.5
+    WindupS: 0.7
+    WindupJitterS: 0.3
     ReleaseDistanceM: 16.8
     ReleaseHeightM: 1.75
     ReleaseSideM: 0.45

@@ -16,9 +16,14 @@ namespace BaseballProto.Core
     {
         private const float FpsSmoothing = 0.1f;
 
+        // 다음 공 시작용 "화면 탭" 판정: 짧게 눌렀다 뗀 것만 (드래그로 커서를 맞추는 동작과 구분)
+        private const double TapMaxDurationS = 0.35;
+        private const float TapMaxMoveHud = 24f;
+
         [SerializeField] private ProtoTuning _tuning = new ProtoTuning();
 
         private readonly List<PointerEvent> _events = new List<PointerEvent>();
+        private readonly Dictionary<int, PointerEvent> _tapDowns = new Dictionary<int, PointerEvent>();
 
         private LeagueConfig _config;
         private TouchHub _touch;
@@ -50,9 +55,15 @@ namespace BaseballProto.Core
             Application.targetFrameRate = web ? -1 : _tuning.TargetFrameRate;
             if (!web)
             {
-                // WebGL은 브라우저가 방향 고정을 지원하지 않아 오류만 난다 (세로 고정은 매니페스트에서)
-                Screen.orientation = ScreenOrientation.Portrait;
+                // 세로·가로 모두 지원: 폰 방향에 따라 자동 회전 (거꾸로 세로는 제외).
+                // WebGL은 브라우저가 방향을 정하므로 호출하지 않는다 (호출하면 오류만 난다)
+                Screen.autorotateToPortrait = true;
+                Screen.autorotateToPortraitUpsideDown = false;
+                Screen.autorotateToLandscapeLeft = true;
+                Screen.autorotateToLandscapeRight = true;
+                Screen.orientation = ScreenOrientation.AutoRotation;
             }
+
             _awaitingStart = web;
             QualitySettings.vSyncCount = 0;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
@@ -84,7 +95,8 @@ namespace BaseballProto.Core
             _trace = new CursorTrace();
             _trace.SetEnabled(Application.isEditor);
             _touch = new TouchHub();
-            _batting = new BattingInput(_tuning, mapper, screen => _hud != null && _hud.IsOnSwingButton(screen));
+            _batting = new BattingInput(_tuning, mapper, screen => _hud != null && _hud.IsOnSwingButton(screen),
+                screen => _hud == null || _hud.IsInDragArea(screen));
             _pitching = new PitchingInput(_tuning, mapper);
             _duel = new DuelController(this, _config, _tuning, _field, ball, _bat, _flight, targetRing, actualRing, _batting,
                 _pitching, impact);
@@ -126,6 +138,12 @@ namespace BaseballProto.Core
             {
                 if (_hud.Handle(e))
                 {
+                    _tapDowns.Remove(e.FingerId);
+                    continue;
+                }
+
+                if (HandleReadyInput(e))
+                {
                     continue;
                 }
 
@@ -151,6 +169,45 @@ namespace BaseballProto.Core
             _flight.Tick(_clock.DeltaTime);
             UpdateCursor();
             RecordCursor(moveEvents, moveDelta);
+        }
+
+        /// <summary>
+        /// 다음 공 대기 중이면 짧은 탭(또는 스페이스)으로 시작한다. 드래그는 그대로 커서 조정으로 넘긴다.
+        /// </summary>
+        /// <returns>이벤트를 여기서 소비했으면 true</returns>
+        private bool HandleReadyInput(PointerEvent e)
+        {
+            switch (e.Phase)
+            {
+                case PointerPhase.SwingKey:
+                    if (_duel.AwaitingReady)
+                    {
+                        _duel.RequestPitch();
+                        return true;
+                    }
+
+                    return false;
+
+                case PointerPhase.Down:
+                    _tapDowns[e.FingerId] = e;
+                    return false;
+
+                case PointerPhase.Up:
+                    if (_tapDowns.TryGetValue(e.FingerId, out PointerEvent down))
+                    {
+                        _tapDowns.Remove(e.FingerId);
+                        float moved = (UiScale.FromScreen(e.ScreenPosition) - UiScale.FromScreen(down.ScreenPosition)).magnitude;
+                        if (_duel.AwaitingReady && e.Time - down.Time <= TapMaxDurationS && moved <= TapMaxMoveHud)
+                        {
+                            _duel.RequestPitch();
+                        }
+                    }
+
+                    return false;
+
+                default:
+                    return false;
+            }
         }
 
         private void WaitForFirstTap()
@@ -207,7 +264,8 @@ namespace BaseballProto.Core
             }
 
             _cursorRing.SetRadius(_tuning.CursorRadiusM);
-            _cursorRing.SetColor(tap ? ProtoColors.CursorTap : ProtoColors.Cursor);
+            // 홀드 모드에서 누르고 있으면 주황: 손을 떼면 스윙된다는 표시
+            _cursorRing.SetColor(tap ? ProtoColors.CursorTap : _batting.Holding ? ProtoColors.CursorHold : ProtoColors.Cursor);
             _cursorRing.Show(_batting.Cursor);
         }
 

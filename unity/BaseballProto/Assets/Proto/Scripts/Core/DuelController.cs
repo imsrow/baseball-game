@@ -90,6 +90,24 @@ namespace BaseballProto.Core
 
         public string Message { get; private set; } = string.Empty;
 
+        /// <summary>다음 공을 시작하라는 입력(START·화면 탭)을 기다리는 중</summary>
+        public bool AwaitingReady { get; private set; }
+
+        /// <summary>이번 경기 성적 (사람 쪽 기준)</summary>
+        public GameStatLine Stats { get; } = new GameStatLine();
+
+        private bool _readyRequested;
+        private int _statsIndex;
+
+        /// <summary>대기 중이면 다음 공을 시작한다 (START 버튼·화면 탭·스페이스)</summary>
+        public void RequestPitch()
+        {
+            if (AwaitingReady)
+            {
+                _readyRequested = true;
+            }
+        }
+
         /// <summary>모드를 바꾸면 새 경기로 시작한다</summary>
         public void RequestMode(DuelMode mode)
         {
@@ -110,6 +128,7 @@ namespace BaseballProto.Core
                 }
 
                 RunResult run = _engine.RunUntil(NeverStop.Instance);
+                UpdateStats();
                 if (run.Status == RunStatus.GameOver)
                 {
                     ShowHeadline("GAME OVER  " + _engine.State.AwayScore + " : " + _engine.State.HomeScore, GameOverHoldS);
@@ -156,6 +175,8 @@ namespace BaseballProto.Core
 
             _engine = new GameEngine(MatchFactory.Create(_gameCount, seed), _config, (ulong)seed, controllers);
             _restart = false;
+            Stats.Reset();
+            _statsIndex = 0;
             LastBatting = null;
             LastPitching = null;
             LastEvent = null;
@@ -167,6 +188,12 @@ namespace BaseballProto.Core
         private IEnumerator BattingTurn(BattingContext ctx)
         {
             Prepare(ctx.Pitcher, ctx.Batter, ctx.BattingHand);
+            yield return _host.StartCoroutine(WaitForReady());
+            if (_restart)
+            {
+                yield break;
+            }
+
             Phase = DuelPhase.Windup;
             double windupEnd = ProtoClock.Now + _tuning.WindupS + Random.Range(0f, _tuning.WindupJitterS);
             while (ProtoClock.Now < windupEnd)
@@ -238,6 +265,7 @@ namespace BaseballProto.Core
             }
 
             LastEvent = FindPitchEvent(before);
+            UpdateStats();
             yield return _host.StartCoroutine(PlayOutcome(LastEvent, trajectory));
         }
 
@@ -246,13 +274,19 @@ namespace BaseballProto.Core
         private IEnumerator PitchingTurn(PitchingContext ctx)
         {
             Prepare(ctx.Pitcher, ctx.Batter, ctx.BattingHand);
-            Phase = DuelPhase.Aiming;
             var types = new List<PitchType>();
             foreach (PitchRating rating in ctx.Pitcher.Pitching.Repertoire)
             {
                 types.Add(rating.Type);
             }
 
+            yield return _host.StartCoroutine(WaitForReady());
+            if (_restart)
+            {
+                yield break;
+            }
+
+            Phase = DuelPhase.Aiming;
             _pitching.Begin(types);
             while (_pitching.Stage != PitchingStage.Done)
             {
@@ -303,6 +337,7 @@ namespace BaseballProto.Core
             }
 
             LastEvent = ev;
+            UpdateStats();
             Phase = DuelPhase.Windup;
             yield return _host.StartCoroutine(Wait(PitchingModeWindupS));
 
@@ -419,6 +454,28 @@ namespace BaseballProto.Core
             _targetRing.Hide();
             Matchup = pitcher.Name + " (" + (pitcher.Throws == Hand.Right ? "R" : "L") + ")  vs  " + batter.Name + " ("
                 + (battingHand == Hand.Right ? "R" : "L") + ")";
+        }
+
+        private IEnumerator WaitForReady()
+        {
+            Phase = DuelPhase.Ready;
+            _readyRequested = false;
+            AwaitingReady = true;
+            while (!_readyRequested && !_restart)
+            {
+                yield return null;
+            }
+
+            AwaitingReady = false;
+        }
+
+        private void UpdateStats()
+        {
+            List<GameEvent> log = _engine.State.Log;
+            for (; _statsIndex < log.Count; _statsIndex++)
+            {
+                Stats.Add(log[_statsIndex]);
+            }
         }
 
         private PitchEvent FindPitchEvent(int fromIndex)

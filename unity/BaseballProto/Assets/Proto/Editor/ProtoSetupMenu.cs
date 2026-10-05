@@ -31,12 +31,7 @@ namespace BaseballProto.EditorTools
 
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
 
-            // 세로 고정
-            PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
-            PlayerSettings.allowedAutorotateToPortrait = true;
-            PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
-            PlayerSettings.allowedAutorotateToLandscapeLeft = false;
-            PlayerSettings.allowedAutorotateToLandscapeRight = false;
+            ProtoBuild.ApplyOrientationSettings();
 
             // WebGL: 홈 화면 추가용 PWA 템플릿, 서버 설정 없이도 열리도록 압축 해제 대체 경로
             PlayerSettings.WebGL.template = "APPLICATION:PWA";
@@ -44,7 +39,7 @@ namespace BaseballProto.EditorTools
 
             PlayerSettings.productName = "BaseballProto";
             AssetDatabase.SaveAssets();
-            Debug.Log("프로토 씬 생성 완료: " + ScenePath + " (빌드 목록 등록, 세로 고정, WebGL PWA 템플릿)");
+            Debug.Log("프로토 씬 생성 완료: " + ScenePath + " (빌드 목록 등록, 자동 회전, WebGL PWA 템플릿)");
         }
 
         [MenuItem("Baseball/Sync Engine DLL")]

@@ -7,6 +7,9 @@ namespace BaseballProto.Core
     {
         Idle = 0,
 
+        /// <summary>다음 공 대기 (START 또는 화면 탭으로 진행)</summary>
+        Ready = 5,
+
         /// <summary>투수 준비 (타격 모드: 커서 이동 가능)</summary>
         Windup = 1,
 

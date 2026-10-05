@@ -17,18 +17,24 @@ namespace BaseballProto.Core
         public float CameraHeightM = 1.0f;
         public float CameraBackM = 2.3f;
         public float CameraLookHeightM = 0.85f;
+
+        /// <summary>가로 화면에서 바라보는 높이. 낮게 보면 존이 화면 세로 가운데로 올라와 하단 조작 영역과 겹치지 않는다</summary>
+        public float CameraLookHeightLandscapeM = 0.1f;
         public float CameraLookAheadM = 8f;
 
         /// <summary>홈플레이트 위치에서 화면 가로에 들어올 폭 (m)</summary>
         public float PlateViewWidthM = 1.5f;
 
+        /// <summary>홈플레이트 위치에서 화면 세로에 최소한 들어올 높이 (m). 가로 화면은 이 값에 맞춰 시야가 넓어진다</summary>
+        public float PlateViewHeightM = 1.6f;
+
         public float MinVerticalFovDeg = 30f;
 
         [Header("투구 연출")]
-        public float WindupS = 0.9f;
+        public float WindupS = 0.7f;
 
         /// <summary>투구 간격이 일정하지 않게 더하는 무작위 준비 시간 (연출 전용, 엔진 RNG 아님)</summary>
-        public float WindupJitterS = 0.5f;
+        public float WindupJitterS = 0.3f;
 
         public float ReleaseDistanceM = 16.8f;
         public float ReleaseHeightM = 1.75f;

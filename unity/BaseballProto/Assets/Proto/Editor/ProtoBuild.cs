@@ -28,8 +28,19 @@ namespace BaseballProto.EditorTools
             EditorApplication.Exit(ok ? 0 : 1);
         }
 
+        /// <summary>세로·가로 자동 회전 (거꾸로 세로 제외). Android 빌드에도 적용된다</summary>
+        public static void ApplyOrientationSettings()
+        {
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
+            PlayerSettings.allowedAutorotateToPortrait = true;
+            PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = true;
+            PlayerSettings.allowedAutorotateToLandscapeRight = true;
+        }
+
         private static bool BuildWebGL()
         {
+            ApplyOrientationSettings();
             // GitHub Pages는 Content-Encoding 헤더를 붙일 수 없다.
             // Gzip + 압축 해제 대체 경로(JS에서 해제): 전송량은 줄이고 서버 설정 없이도 열린다.
             // Brotli는 JS 해제가 느려 Gzip을 쓴다.
