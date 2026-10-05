@@ -11,21 +11,22 @@ $worktree = Join-Path ([System.IO.Path]::GetTempPath()) 'baseball-gh-pages'
 
 if (-not (Test-Path (Join-Path $build 'index.html'))) { throw "빌드 결과물이 없습니다: $build" }
 
-function Git { git -C $root @args; if ($LASTEXITCODE -ne 0) { throw "git 실패: $args" } }
-function GitWt { git -C $worktree @args; if ($LASTEXITCODE -ne 0) { throw "git 실패: $args" } }
+# PowerShell 이름은 대소문자를 구분하지 않으므로 git과 겹치지 않는 이름을 쓴다
+function Invoke-RootGit { git.exe -C $root @args; if ($LASTEXITCODE -ne 0) { throw "git 실패: $args" } }
+function Invoke-WorktreeGit { git.exe -C $worktree @args; if ($LASTEXITCODE -ne 0) { throw "git 실패: $args" } }
 
-$source = (git -C $root rev-parse --short HEAD).Trim()
+$source = (git.exe -C $root rev-parse --short HEAD).Trim()
 
 if (Test-Path $worktree) { Remove-Item -Recurse -Force $worktree }
-Git worktree prune
+Invoke-RootGit worktree prune
 
 # 원격 gh-pages가 있으면 이어서, 없으면 기록 없는(orphan) 브랜치로 시작
-$remote = git -C $root ls-remote --heads origin $branch
+$remote = git.exe -C $root ls-remote --heads origin $branch
 if ($remote) {
-    Git fetch origin $branch
-    Git worktree add -B $branch $worktree "origin/$branch"
+    Invoke-RootGit fetch origin $branch
+    Invoke-RootGit worktree add -B $branch $worktree "origin/$branch"
 } else {
-    Git worktree add --orphan -b $branch $worktree
+    Invoke-RootGit worktree add --orphan -b $branch $worktree
 }
 
 try {
@@ -35,15 +36,15 @@ try {
     # Jekyll 처리 끄기 (밑줄로 시작하는 파일 등을 그대로 서비스)
     New-Item -ItemType File -Force (Join-Path $worktree '.nojekyll') | Out-Null
 
-    GitWt add -A
-    git -C $worktree diff --cached --quiet
+    Invoke-WorktreeGit add -A
+    git.exe -C $worktree diff --cached --quiet
     if ($LASTEXITCODE -eq 0) {
         Write-Host "변경 사항 없음: 배포 생략"
     } else {
-        GitWt commit -q -m "WebGL 빌드 배포 (main $source)"
-        GitWt push -u origin $branch
+        Invoke-WorktreeGit commit -q -m "Deploy WebGL build (main $source)"
+        Invoke-WorktreeGit push -u origin $branch
         Write-Host "배포 완료: $branch (main $source)"
     }
 } finally {
-    git -C $root worktree remove --force $worktree
+    git.exe -C $root worktree remove --force $worktree
 }
