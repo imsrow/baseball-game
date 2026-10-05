@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using BaseballProto.Core;
 using BaseballProto.Input;
 using BaseballSim.Engine.Events;
@@ -144,6 +145,29 @@ namespace BaseballProto.UI
             }
 
             Label(hud.HintRect, hint, 22, _label);
+            DrawCalibration(hud);
+        }
+
+        /// <summary>타이밍 보정 진행·결과 (힌트 바로 위)</summary>
+        private void DrawCalibration(Hud hud)
+        {
+            TimingCalibration calib = hud.Duel.Calibration;
+            string text;
+            if (calib.Measuring)
+            {
+                text = string.Format(CultureInfo.InvariantCulture, "TIMING CALIB {0}/{1}: swing as usual", calib.Count, calib.Target);
+            }
+            else if (ProtoClock.Now < calib.NoticeUntil)
+            {
+                text = calib.Notice;
+            }
+            else
+            {
+                return;
+            }
+
+            Rect r = hud.HintRect;
+            Label(new Rect(r.x, r.y - 36f, r.width, r.height), text, 24, _headline);
         }
 
         private static string HintFor(BattingControlMode mode)

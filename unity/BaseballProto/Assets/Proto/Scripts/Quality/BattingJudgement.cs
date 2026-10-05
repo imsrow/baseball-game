@@ -10,6 +10,9 @@ namespace BaseballProto.Quality
         /// <summary>입력 시각 − 공 도달 시각 (ms, + 늦음)</summary>
         public double TimingErrorMs { get; set; }
 
+        /// <summary>보정(Calib ms) 적용 전 입력 시각 − 공 도달 시각 (ms). 타이밍 보정 측정에 쓴다</summary>
+        public double RawTimingErrorMs { get; set; }
+
         public double TimingScore { get; set; }
 
         /// <summary>커서 − 공 (m, x: 1루 쪽 +)</summary>

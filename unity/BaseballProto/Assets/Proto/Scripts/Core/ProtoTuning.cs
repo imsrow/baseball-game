@@ -68,9 +68,19 @@ namespace BaseballProto.Core
 
         /// <summary>
         /// 화면 표시 지연 보정 (ms). 공이 화면에 실제로 그려지는 시점이 계산보다 늦는 만큼 판정 기준을 미룬다.
-        /// 기기마다 다르므로 HUD에서 맞춘다 (늘 늦게 판정되면 값을 올린다)
+        /// 기기마다 다르므로 HUD에서 맞춘다 (늘 늦게 판정되면 값을 올린다). 개인 습관(늘 이르게 침)도 음수로 여기서 맞춘다.
+        /// TUNE의 타이밍 보정(TimingCalibration)이 자동으로 정하고 기기에 저장한다
         /// </summary>
         public float DisplayLatencyMs = 0f;
+
+        /// <summary>타이밍 보정: 이 스윙 수의 평균 오차로 Calib ms를 정한다</summary>
+        public int CalibSwingCount = 10;
+
+        /// <summary>타이밍 보정: 오차가 이보다 큰 스윙은 측정에서 뺀다 (체크 스윙·엉뚱한 입력)</summary>
+        public float CalibMaxAbsErrorMs = 300f;
+
+        /// <summary>타이밍 보정 결과 안내 표시 시간</summary>
+        public float CalibResultShowS = 4f;
 
         /// <summary>공 도달 후 이 시간까지 스윙 입력이 없으면 지켜봄(Take)</summary>
         public float LateCutoffMs = 120f;

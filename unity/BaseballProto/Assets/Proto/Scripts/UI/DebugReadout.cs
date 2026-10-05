@@ -25,7 +25,7 @@ namespace BaseballProto.UI
             if (duel.Mode == DuelMode.Batting)
             {
                 AddBatting(lines, duel.LastBatting, mod);
-                AddBias(lines, duel.SwingBias);
+                AddBias(lines, duel.SwingBias, duel.Calibration);
             }
             else
             {
@@ -65,15 +65,17 @@ namespace BaseballProto.UI
                 -dir * mod.MaxTimingSprayShiftDeg, -cv * mod.MaxCursorLaunchAngleShiftDeg));
         }
 
-        private static void AddBias(List<string> lines, SwingBiasTracker bias)
+        private static void AddBias(List<string> lines, SwingBiasTracker bias, TimingCalibration calib)
         {
+            string calibText = F("calib {0:+0;-0;0} ms{1}", calib.CurrentMs, calib.Measuring ? " (measuring)" : "");
             if (bias.Count == 0)
             {
+                lines.Add(calibText);
                 return;
             }
 
-            lines.Add(F("Last {0} swings avg: timing {1:+0;-0} ms  dz {2:+0.000;-0.000} m", bias.Count, bias.MeanTimingErrorMs,
-                bias.MeanCursorDz));
+            lines.Add(F("Last {0} swings avg: timing {1:+0;-0} ms  dz {2:+0.000;-0.000} m   {3}", bias.Count,
+                bias.MeanTimingErrorMs, bias.MeanCursorDz, calibText));
         }
 
         private static void AddPitching(List<string> lines, PitchJudgement j, PitchEvent ev, InputModifierConfig mod)

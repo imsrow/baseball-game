@@ -26,6 +26,13 @@ namespace BaseballProto.Quality
         /// <summary>평균 커서 − 공 높이 (m, + 커서가 위)</summary>
         public double MeanCursorDz => Count > 0 ? _dzSum / Count : 0.0;
 
+        public void Clear()
+        {
+            _recent.Clear();
+            _timingSumMs = 0;
+            _dzSum = 0;
+        }
+
         public void Add(BattingJudgement judgement)
         {
             _recent.Enqueue(judgement);

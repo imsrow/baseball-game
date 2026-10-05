@@ -19,7 +19,8 @@ namespace BaseballProto.Quality
 
         public static BattingJudgement Judge(SwingInput swing, double arrivalTime, PlateLocation ball, ProtoTuning tuning)
         {
-            double errorMs = (swing.Time - arrivalTime) * MsPerSecond - tuning.DisplayLatencyMs;
+            double rawErrorMs = (swing.Time - arrivalTime) * MsPerSecond;
+            double errorMs = rawErrorMs - tuning.DisplayLatencyMs;
             double timingScore = QualityMath.Score(Math.Abs(errorMs), tuning.PerfectTimingMs, tuning.ZeroTimingMs);
 
             double dx = swing.CursorPlate.x - ball.X;
@@ -37,6 +38,7 @@ namespace BaseballProto.Quality
             return new BattingJudgement
             {
                 TimingErrorMs = errorMs,
+                RawTimingErrorMs = rawErrorMs,
                 TimingScore = timingScore,
                 CursorDx = dx,
                 CursorDz = dz,

@@ -34,6 +34,7 @@ namespace BaseballProto.Core
         private BattedBallFlight _flight;
         private RingView _cursorRing;
         private BallView _ball;
+        private TimingCalibration _calibration;
         private BattingInput _batting;
         private PitchingInput _pitching;
         private DuelController _duel;
@@ -106,8 +107,9 @@ namespace BaseballProto.Core
             _batting = new BattingInput(_tuning, _config.StrikeZone, mapper,
                 screen => _hud != null && _hud.IsOnSwingButton(screen), screen => _hud == null || _hud.IsInDragArea(screen));
             _pitching = new PitchingInput(_tuning, mapper);
+            _calibration = new TimingCalibration(_tuning);
             _duel = new DuelController(this, _config, _tuning, _field, ball, _bat, _flight, targetRing, actualRing, _batting,
-                _pitching, impact);
+                _pitching, impact, _calibration);
             _hud = new Hud(_duel, _batting, _pitching, _tuning, impact, _trace);
             _hudRenderer = new HudRenderer();
         }
@@ -172,6 +174,7 @@ namespace BaseballProto.Core
             }
 
             _ball.ShadowEnabled = _tuning.BallShadow;
+            _calibration.Tick(ProtoClock.Now);
             _clock.Tick(dt);
             _shake.Tick(dt);
             _bat.Tick(_clock.DeltaTime);

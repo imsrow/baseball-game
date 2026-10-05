@@ -48,8 +48,9 @@ namespace BaseballProto.Core
 
         public DuelController(MonoBehaviour host, LeagueConfig config, ProtoTuning tuning, FieldView field, BallView ball,
             BatView bat, BattedBallFlight flight, RingView targetRing, RingView actualRing, BattingInput batting,
-            PitchingInput pitching, ImpactFeedback impact)
+            PitchingInput pitching, ImpactFeedback impact, TimingCalibration calibration)
         {
+            Calibration = calibration;
             _host = host;
             _config = config;
             _tuning = tuning;
@@ -80,6 +81,8 @@ namespace BaseballProto.Core
 
         /// <summary>최근 스윙의 평균 타이밍·커서 오차 (경기가 바뀌어도 이어서 센다)</summary>
         public SwingBiasTracker SwingBias { get; }
+
+        public TimingCalibration Calibration { get; }
 
         public PitchJudgement LastPitching { get; private set; }
 
@@ -214,7 +217,9 @@ namespace BaseballProto.Core
             var trajectory = new PitchTrajectory(pitch.Actual, pitch.VelocityKmh, pitch.Type, ctx.Pitcher.Throws, ProtoClock.Now,
                 _tuning);
             LastFlightTimeS = trajectory.FlightTime;
-            double cutoff = trajectory.ArrivalTime + (_tuning.LateCutoffMs + _tuning.DisplayLatencyMs) / 1000.0;
+            // 보정이 음수(이르게 치는 습관)여도 공이 홈플레이트에 오기 전에 지켜봄으로 끊지 않는다
+            double cutoff = trajectory.ArrivalTime
+                + (_tuning.LateCutoffMs + System.Math.Max(0f, _tuning.DisplayLatencyMs)) / 1000.0;
             _batting.Arm(trajectory.ReleaseTime);
             Phase = DuelPhase.InFlight;
 
@@ -252,6 +257,11 @@ namespace BaseballProto.Core
                 LastBatting = BattingQualityMapper.Judge(swing, trajectory.ArrivalTime, pitch.Actual, _tuning);
                 action = LastBatting.Action;
                 SwingBias.Add(LastBatting);
+                if (Calibration.Add(LastBatting.RawTimingErrorMs))
+                {
+                    // 새 보정 기준으로 쏠림을 다시 센다
+                    SwingBias.Clear();
+                }
                 _bat.Swing(_tuning.SwingDurationS);
             }
             else

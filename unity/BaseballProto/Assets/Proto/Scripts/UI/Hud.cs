@@ -37,6 +37,7 @@ namespace BaseballProto.UI
         private const float LandscapeDebugMaxWidth = 620f;
         private const float LandscapeDebugRatio = 0.48f;
         private const float LandscapePanelMaxWidth = 640f;
+        private const float CalibButtonWidth = 220f;
 
         private readonly DuelController _duel;
         private readonly BattingInput _batting;
@@ -349,7 +350,8 @@ namespace BaseballProto.UI
             Row("Ball slow x", "0.00", 1f, 2.5f, () => t.FlightTimeScale, v => t.FlightTimeScale = v);
             Row("Perfect ms", "0", 5f, 80f, () => t.PerfectTimingMs, v => t.PerfectTimingMs = v);
             Row("Zero ms", "0", 60f, 250f, () => t.ZeroTimingMs, v => t.ZeroTimingMs = v);
-            Row("Calib ms", "0", -50f, 150f, () => t.DisplayLatencyMs, v => t.DisplayLatencyMs = v);
+            // 개인 타이밍 보정 (− = 늘 이르게 치는 습관). 아래 TIMING CALIB 버튼이 자동으로 정한다
+            Row("Calib ms", "0", -250f, 150f, () => t.DisplayLatencyMs, v => t.DisplayLatencyMs = v);
             Row("Cursor R m", "0.000", 0.05f, 0.25f, () => t.CursorRadiusM, v => t.CursorRadiusM = v);
             Row("Timing weight", "0.00", 0f, 1f, () => t.TimingWeight, v => t.TimingWeight = v);
             Row("Cursor zero d/R", "0.00", 0.5f, 4f, () => t.CursorZeroRatio,
@@ -371,6 +373,12 @@ namespace BaseballProto.UI
 
             float bottom = panelTop + rowsPerColumn * SliderRowHeight;
             Buttons.Add(new UiButton(new Rect(safe.x + Margin, bottom + 6f, 200f, TopBarHeightLandscape), "RESET", ResetTuning));
+            TimingCalibration calib = _duel.Calibration;
+            float calibX = safe.x + Margin * 2f + 200f;
+            Buttons.Add(new UiButton(new Rect(calibX, bottom + 6f, CalibButtonWidth, TopBarHeightLandscape),
+                calib.Measuring ? "CANCEL CALIB" : "TIMING CALIB", ToggleCalibration, calib.Measuring));
+            Buttons.Add(new UiButton(new Rect(calibX + CalibButtonWidth + Margin, bottom + 6f, CalibButtonWidth,
+                TopBarHeightLandscape), "CALIB = 0", calib.ResetToZero));
             PanelRect = new Rect(0f, panelTop - 6f, UiScale.Width, bottom - panelTop + TopBarHeightLandscape + 18f);
         }
 
@@ -405,9 +413,26 @@ namespace BaseballProto.UI
             return new UiButton(rect, label + ": " + (on ? "ON" : "OFF"), flip, on);
         }
 
+        private void ToggleCalibration()
+        {
+            TimingCalibration calib = _duel.Calibration;
+            if (calib.Measuring)
+            {
+                calib.Cancel();
+                return;
+            }
+
+            // 측정은 평소처럼 치면서 하므로 패널을 닫는다
+            calib.Start();
+            TuneOpen = false;
+        }
+
         private void ResetTuning()
         {
+            // 타이밍 보정은 기기에 저장한 개인 값이라 RESET에서도 유지 (지우려면 CALIB = 0)
+            float calibMs = _tuning.DisplayLatencyMs;
             JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(new ProtoTuning()), _tuning);
+            _tuning.DisplayLatencyMs = calibMs;
             var defaults = new InputModifierConfig();
             InputModifierConfig m = _duel.Config.InputModifier;
 
