@@ -48,3 +48,8 @@ try {
 } finally {
     git.exe -C $root worktree remove --force $worktree
 }
+
+# 성공 시 종료 코드를 0으로 고정 (실패는 위에서 throw → 1).
+# 참고: 호출하는 쪽에서 `git ... | Select-Object -First N`처럼 네이티브 명령을 중간에 끊으면 PowerShell 5.1은
+# $LASTEXITCODE를 −1(=255)로 남기므로, 배포 뒤에 그런 명령을 이어 붙이면 성공해도 255로 보인다
+exit 0

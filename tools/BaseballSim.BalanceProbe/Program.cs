@@ -25,6 +25,7 @@ namespace BaseballSim.BalanceProbe
             double? swingCaps = null;
             double? swingPenalty = null;
             double? locationScale = null;
+            bool evLa = false;
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -46,6 +47,9 @@ namespace BaseballSim.BalanceProbe
                     case "--swing-penalty":
                         swingPenalty = double.Parse(value, CultureInfo.InvariantCulture);
                         i++;
+                        break;
+                    case "--ev-la":
+                        evLa = true;
                         break;
                     case "--location-scale":
                         locationScale = double.Parse(value, CultureInfo.InvariantCulture);
@@ -95,6 +99,10 @@ namespace BaseballSim.BalanceProbe
                 Console.WriteLine(stats.Row("(" + ScenarioInfo.Code(scenario) + ") " + ScenarioInfo.Name(scenario)));
                 Console.WriteLine(ProbeStats.RegionHeader);
                 Console.Write(stats.RegionRows());
+                if (evLa)
+                {
+                    Console.Write(stats.GridTable());
+                }
             }
 
             return 0;
