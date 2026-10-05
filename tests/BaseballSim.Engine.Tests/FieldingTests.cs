@@ -106,6 +106,42 @@ namespace BaseballSim.Engine.Tests
             Assert.False(s.IsForced(3));
         }
 
+        [Theory]
+        [InlineData(115, 22, 4, true)]   // 중견수 앞 69 m 라이너
+        [InlineData(101, 46, 0, false)]  // 중견수 앞 61 m 빗맞은 뜬공
+        public void 중견수_앞에_짧게_떨어진_안타는_대부분_1루타(double evKmh, double laDeg, double sprayDeg, bool solid)
+        {
+            var field = new FieldGeometry(_config.Field);
+            var resolver = new FieldingResolver(_config, field);
+            var defense = DefensiveAlignment.Build(p => TestData.Hitter(100 + (int)p, p), field, _config);
+            var rng = new Pcg32Random(7);
+            int hits = 0;
+            int extraBase = 0;
+            for (int i = 0; i < 2000; i++)
+            {
+                var s = new PlaySituation
+                {
+                    OutsBefore = 0,
+                    Batter = new RunnerProfile(1, new BatterRatings(), Hand.Right),
+                    Defense = defense,
+                };
+                var ball = new BattedBall { ExitVelocityKmh = evKmh, LaunchAngleDeg = laDeg, SprayAngleDeg = sprayDeg, IsSolid = solid };
+                PlayResult r = resolver.Resolve(ball, s, rng);
+                if (r.Outcome == PlateAppearanceOutcome.Single)
+                {
+                    hits++;
+                }
+                else if (r.Outcome == PlateAppearanceOutcome.Double || r.Outcome == PlateAppearanceOutcome.Triple)
+                {
+                    hits++;
+                    extraBase++;
+                }
+            }
+
+            Assert.True(hits > 0);
+            Assert.True(extraBase <= 0.1 * hits, $"장타 {extraBase} / 안타 {hits}");
+        }
+
         [Fact]
         public void 판정결과_주자이동은_일관성이_있다()
         {

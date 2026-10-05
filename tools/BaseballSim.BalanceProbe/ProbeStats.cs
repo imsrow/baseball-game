@@ -18,6 +18,7 @@ namespace BaseballSim.BalanceProbe
 
         private readonly RegionStats[] _regions = Regions.Select(_ => new RegionStats()).ToArray();
         private readonly BattedBallGrid _grid = new BattedBallGrid();
+        private readonly HitTypeTable _hitTypes = new HitTypeTable();
         private int _pa, _ab, _hits, _totalBases, _homeRuns, _strikeouts, _walks, _hitByPitch, _sacFlies;
         private int _pitches, _inZone, _outZone, _swings, _contacts, _outSwings;
 
@@ -65,10 +66,14 @@ namespace BaseballSim.BalanceProbe
         /// <summary>타구속도 × 발사각 구간별 안타율 표</summary>
         public string GridTable() => _grid.Table();
 
+        /// <summary>낙하 거리 구간별 1·2·3루타 비율 표</summary>
+        public string HitTypes() => _hitTypes.Table();
+
         private void AddPitch(PitchEvent ev)
         {
             _pitches++;
             _grid.Add(ev);
+            _hitTypes.Add(ev);
             _regions[(int)ev.Region].Add(ev);
             if (ev.IsInZone)
             {

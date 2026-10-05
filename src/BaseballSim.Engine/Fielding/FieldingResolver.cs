@@ -150,8 +150,9 @@ namespace BaseballSim.Engine.Fielding
             result.FieldedTimeS = retrieval.BallTimeS;
             result.FielderArrivalS = retrieval.Fielder.TimeToReach(retrieval.Point);
             bool delayed = situation.OutsBefore < _config.Rules.OutsPerHalfInning - 1;
+            double batterDelay = _running.Config.BatterRoutineFlyDelayS * catchProbability;
             HitAdvanceOutcome advance = _hitAdvancement.Resolve(situation, retrieval.Fielder, retrieval.Point,
-                retrieval.BallTimeS, delayed, result, random);
+                retrieval.BallTimeS, delayed, result, random, batterDelay);
             result.Outcome = HitOutcome(advance.BatterSafeBase);
         }
 
@@ -163,11 +164,11 @@ namespace BaseballSim.Engine.Fielding
             IRandomSource random)
         {
             double fence = _field.FenceDistance(sprayDeg);
-            GroundIntercept intercept = FindIntercept(path, fielders, fence);
+            GroundIntercept intercept = FindEarliestIntercept(path, fielders, fence);
             if (intercept != null)
             {
-                return new GroundIntercept(intercept.Fielder, intercept.Point, intercept.BallTimeS + _fc.OutfieldPickupS,
-                    intercept.MarginS);
+                double pickup = _fc.OutfieldPickupS + _fc.OutfieldChasePickupExtraS * ChaseFactor(intercept, sprayDeg);
+                return new GroundIntercept(intercept.Fielder, intercept.Point, intercept.BallTimeS + pickup, intercept.MarginS);
             }
 
             FieldPoint wall = FieldPoint.FromPolar(fence, sprayDeg);
@@ -178,6 +179,25 @@ namespace BaseballSim.Engine.Fielding
             }
 
             return RetrieveAtWall(wall, reachWall, fielders, random);
+        }
+
+        /// <summary>
+        /// 야수가 공과 같은 방향으로 달려가 잡았는지: 정면으로 달려 나옴 0, 옆으로 끊음 0.5, 뒤에서 쫓아감 1.
+        /// 제자리 근처에서 잡으면 공이 야수 쪽으로 오는 것이라 0
+        /// </summary>
+        private static double ChaseFactor(GroundIntercept intercept, double sprayDeg)
+        {
+            double dx = intercept.Point.X - intercept.Fielder.Start.X;
+            double dy = intercept.Point.Y - intercept.Fielder.Start.Y;
+            double run = Math.Sqrt(dx * dx + dy * dy);
+            if (run < intercept.Fielder.ReachM)
+            {
+                return 0;
+            }
+
+            double rad = sprayDeg * Math.PI / 180.0;
+            double dot = (dx * Math.Sin(rad) + dy * Math.Cos(rad)) / run;
+            return (1.0 + dot) * 0.5;
         }
 
         private GroundIntercept RetrieveAtWall(FieldPoint wall, double ballAtWallS, IEnumerable<FielderProfile> fielders,
@@ -357,6 +377,49 @@ namespace BaseballSim.Engine.Fielding
             foreach (FielderProfile fielder in fielders)
             {
                 GroundIntercept found = FielderIntercept(path, fielder, maxDistanceFromHome);
+                if (found != null && (best == null || found.BallTimeS < best.BallTimeS))
+                {
+                    best = found;
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>
+        /// 외야 회수: 각 야수가 공을 향해 달려 나와 가장 이르게 잡을 수 있는 지점.
+        /// (내야 땅볼처럼 정면에서 기다리면 외야에선 공이 굴러올 때까지 서 있게 된다)
+        /// </summary>
+        private GroundIntercept FindEarliestIntercept(GroundPath path, List<FielderProfile> fielders, double maxDistanceFromHome)
+        {
+            GroundIntercept best = null;
+            double stop = path.StopDistanceM;
+            foreach (FielderProfile fielder in fielders)
+            {
+                GroundIntercept found = null;
+                for (double d = 0; d < stop; d += _fc.InterceptScanStepM)
+                {
+                    if (path.PointAt(d).DistanceFromHome > maxDistanceFromHome)
+                    {
+                        break;
+                    }
+
+                    found = TryIntercept(path, fielder, d, maxDistanceFromHome);
+                    if (found != null)
+                    {
+                        break;
+                    }
+                }
+
+                if (found == null)
+                {
+                    FieldPoint stopPoint = path.PointAt(stop);
+                    if (stopPoint.DistanceFromHome <= maxDistanceFromHome)
+                    {
+                        found = new GroundIntercept(fielder, stopPoint, Math.Max(fielder.TimeToReach(stopPoint), path.StopTimeS), 0);
+                    }
+                }
+
                 if (found != null && (best == null || found.BallTimeS < best.BallTimeS))
                 {
                     best = found;

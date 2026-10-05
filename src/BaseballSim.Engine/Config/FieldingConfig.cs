@@ -8,7 +8,7 @@ namespace BaseballSim.Engine.Config
         // ── 반응·이동 ──
 
         public double InfieldReactionS { get; set; } = 0.30;
-        public double OutfieldReactionS { get; set; } = 1.20;
+        public double OutfieldReactionS { get; set; } = 1.00;
 
         /// <summary>외야수는 라인드라이브 궤적 판단이 어려워 첫 반응이 더 늦다</summary>
         public double OutfieldLineDriveExtraReactionS { get; set; } = 0.35;
@@ -32,7 +32,7 @@ namespace BaseballSim.Engine.Config
         public double InfieldAirBallSpeedMps { get; set; } = 6.5;
 
         /// <summary>외야수 평균 이동 속도 (가속 포함, m/s). 최고 속도 원본 27 ft/s(8.2 m/s)보다 낮게 둔다</summary>
-        public double OutfieldSpeedMps { get; set; } = 7.9;
+        public double OutfieldSpeedMps { get; set; } = 7.2;
 
         /// <summary>내야수 수비범위 1 표준편차당 이동 속도 증가</summary>
         public double InfieldSpeedMpsPerSd { get; set; } = 0.17;
@@ -129,6 +129,12 @@ namespace BaseballSim.Engine.Config
 
         /// <summary>외야수가 굴러가는 공 앞에서 속도를 줄이고 공을 집어 드는 시간</summary>
         public double OutfieldPickupS { get; set; } = 0.85;
+
+        /// <summary>
+        /// 멀어지는 공을 쫓아가 잡을 때 추가 시간 (멈추고 돌아서 송구 자세). 정면으로 달려 나오면 0,
+        /// 옆으로 끊으면 절반, 뒤에서 쫓아가면 전부
+        /// </summary>
+        public double OutfieldChasePickupExtraS { get; set; } = 1.10;
 
         /// <summary>외야 잔디에 떨어진 공의 첫 바운드 후 수평 속도 유지 비율</summary>
         public double OutfieldLandingSpeedRetention { get; set; } = 0.75;

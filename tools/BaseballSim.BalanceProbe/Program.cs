@@ -26,6 +26,7 @@ namespace BaseballSim.BalanceProbe
             double? swingPenalty = null;
             double? locationScale = null;
             bool evLa = false;
+            bool hitTypes = false;
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -50,6 +51,9 @@ namespace BaseballSim.BalanceProbe
                         break;
                     case "--ev-la":
                         evLa = true;
+                        break;
+                    case "--hit-types":
+                        hitTypes = true;
                         break;
                     case "--location-scale":
                         locationScale = double.Parse(value, CultureInfo.InvariantCulture);
@@ -102,6 +106,11 @@ namespace BaseballSim.BalanceProbe
                 if (evLa)
                 {
                     Console.Write(stats.GridTable());
+                }
+
+                if (hitTypes)
+                {
+                    Console.Write(stats.HitTypes());
                 }
             }
 

@@ -27,8 +27,9 @@ namespace BaseballSim.Engine.Fielding
         }
 
         /// <param name="runnersDelayed">2아웃 미만 뜬공처럼 주자가 타구 확인 후 출발하는지</param>
+        /// <param name="batterDelayS">타자 출발 지연 (평범한 뜬공이라 전력 질주하지 않은 시간)</param>
         public HitAdvanceOutcome Resolve(PlaySituation situation, FielderProfile fielder, FieldPoint pickPoint,
-            double pickTimeS, bool runnersDelayed, PlayResult result, IRandomSource random)
+            double pickTimeS, bool runnersDelayed, PlayResult result, IRandomSource random, double batterDelayS = 0)
         {
             var finals = new int[4];
             var attempts = new List<AdvanceAttempt>();
@@ -46,7 +47,7 @@ namespace BaseballSim.Engine.Fielding
                 int minBase = b == 0 ? 1 : (situation.IsForced(b) ? b + 1 : b);
                 int maxBase = Math.Min(4, limit - 1);
                 minBase = Math.Min(minBase, maxBase);
-                double start = b == 0 ? 0 : delay;
+                double start = b == 0 ? batterDelayS : delay;
 
                 int chosen = minBase;
                 double chosenMargin = double.PositiveInfinity;

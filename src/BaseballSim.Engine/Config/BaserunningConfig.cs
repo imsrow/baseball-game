@@ -29,6 +29,12 @@ namespace BaseballSim.Engine.Config
         /// <summary>2아웃 미만 뜬공·라인드라이브에서 주자가 타구를 확인하느라 늦는 시간</summary>
         public double FlyBallHoldDelayS { get; set; } = 1.0;
 
+        /// <summary>
+        /// 잡힐 것 같던 뜬공이 떨어졌을 때 타자가 늦는 시간 (포구 확률 1일 때). 평범한 뜬공엔 전력 질주하지 않는다.
+        /// 실제 지연 = 이 값 × 포구 확률 (갭·펜스 타구는 0)
+        /// </summary>
+        public double BatterRoutineFlyDelayS { get; set; } = 1.0;
+
         /// <summary>추가 진루 시도에 필요한 예상 여유 시간</summary>
         public double AdvanceMarginS { get; set; } = 0.15;
 

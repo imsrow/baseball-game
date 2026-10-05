@@ -196,8 +196,19 @@ namespace BaseballSim.Engine.Tests
         [Fact]
         public void 득점권_위기와_찬스에서_멈춘다()
         {
-            GameEngine engine = AiEngine(6);
-            RunResult run = engine.RunUntil(StopConditions.ScoringThreat(TeamSide.Home));
+            // 득점권 위기가 실제로 나오는 경기를 고른다 (시드에 따라 한 번도 없을 수 있음)
+            GameEngine engine = null;
+            RunResult run = null;
+            for (ulong seed = 6; seed < 30; seed++)
+            {
+                engine = AiEngine(seed);
+                run = engine.RunUntil(StopConditions.ScoringThreat(TeamSide.Home));
+                if (run.Status == RunStatus.ConditionMet)
+                {
+                    break;
+                }
+            }
+
             Assert.Equal(RunStatus.ConditionMet, run.Status);
             Assert.Equal(TeamSide.Home, engine.State.DefenseSide);
             Assert.True(engine.State.HasRunnerInScoringPosition);

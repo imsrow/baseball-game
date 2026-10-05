@@ -51,7 +51,8 @@
 - `dotnet build`, `dotnet test` (xUnit). 이 PC에는 .NET 10 런타임만 있어 테스트·도구 실행 시 `DOTNET_ROLL_FORWARD=Major` 필요
 - 하네스 (요청 시에만): `dotnet run -c Release --project tools/BaseballSim.Harness -- --seeds 1`
 - 밸런스 비교 (사람처럼 던지기·치기 vs AI, 구역별 성적): `dotnet run -c Release --project tools/BaseballSim.BalanceProbe -- --games 2000 --scenarios a,b,f,g,h,i [--swing-caps 1.0] [--swing-penalty 0.4] [--ev-la]`
-  (`--ev-la`: 타구속도 × 발사각 구간별 타율·장타율 표, 강한 라이너 아웃의 비거리·체공·포구 수비수)
+  (`--ev-la`: 타구속도 × 발사각 구간별 타율·장타율 표, 강한 라이너 아웃의 비거리·체공·포구 수비수.
+  `--hit-types`: 낙하 거리 구간별 1·2·3루타 비율, 짧은 장타 예시)
 - WebGL 빌드 (에디터를 닫고): `Unity.exe -batchmode -projectPath unity/BaseballProto -buildTarget WebGL -executeMethod BaseballProto.EditorTools.ProtoBuild.BuildWebGLBatch`
   (에디터 메뉴 Baseball > Build WebGL도 같음). 결과물 `unity/BaseballProto/Builds/WebGL`
 - WebGL 배포: `powershell -ExecutionPolicy Bypass -File tools/deploy-webgl.ps1` → gh-pages 브랜치 → https://imsrow.github.io/baseball-game/
@@ -72,7 +73,7 @@
   - A: 상태 머신, 투구 판정(실행·인지·스윙·컨택), 타구 생성·비행, 물리 기반 수비·주루, 기본 AI, 검증 하네스
   - B: 도루·번트·폭투·포일·낫아웃, 고의4구, 대타·대주자·대수비, 불펜 역할(마무리·셋업)
   - C: 직접↔시뮬 전환, 멈춤 조건, 사람 감독 흐름, 저장/불러오기
-- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 97개 통과
+- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 100개 통과
 - 타구 판정 조정 (2026-10-05, `--ev-la` 기준): 강한 라이너(161+, 10~25도) 아웃 31% → 21%, 약한 뜬공 역전 축소,
   강한 고각 타구에 펜스 앞 아웃. 방법:
   - 양력은 `BallPhysicsConfig.LiftStartDeg`(15도)부터 증가 → 라이너가 낮고 짧게 날아감
@@ -80,7 +81,16 @@
   - 타구별 비거리 편차: 항력 배율 `CarryNoiseSd`(0.06, 0.85~1.15) → 경계 타구가 펜스 앞에서 잡히기도 함
   - 내야수 뜬공 추격 속도 `FieldingConfig.InfieldAirBallSpeedMps`(6.5, 땅볼 횡이동 4.2와 별도)
   - 펜스에 맞을 타구도 포구 높이 위면 펜스 앞 포구 시도 (`FlightResult.CatchAtWall`, 추가 시간 `WallCatchExtraS` 0.5)
-  - 리그 수준 보정: `OutfieldReactionS` 1.0 → 1.2, `OutfieldLineDriveExtraReactionS` 0.3 → 0.35
+  - 라인드라이브 외야 추가 반응 `OutfieldLineDriveExtraReactionS` 0.3 → 0.35
+- 안타 종류 판정 수정 (2026-10-05, `BalanceProbe --hit-types`): 60 m 미만에 떨어진 안타의 2루타 39% → 8%
+  - 원인: 외야 회수가 내야 땅볼식 "정면 처리"라, 외야수 쪽으로 굴러오는 공을 제자리에서 기다렸다 (회수 1~2초 지연)
+  - 외야 회수는 달려 나와 가장 이르게 잡는 지점 (`FindEarliestIntercept`). 멀어지는 공을 쫓아 잡으면 추가 시간
+    `OutfieldChasePickupExtraS`(1.1, 정면 0·옆 절반·뒤 전부)
+  - 잡힐 것 같던 뜬공이 떨어지면 타자가 늦음: `BaserunningConfig.BatterRoutineFlyDelayS`(1.0) × 포구 확률
+  - 외야: 반응 `OutfieldReactionS` 1.0(오전에 1.2로 올렸던 것 되돌림), 평균 속도 `OutfieldSpeedMps` 7.9 → 7.2
+    (가속 포함 평균이라 최고 속도 8.2보다 충분히 낮게. 갭 커버 범위가 줄어 깊은 안타가 늘어남)
+- 타구 연출용 시각: `BattedBallData.HasLanding/LandingX/LandingY/LandingTimeS/FieldedTimeS/FielderArrivalS`
+  (판정·난수 무관, 저장 형식 v2, v1도 읽음)
 - 투구 위치 효과: 구역(Heart/Shadow/Chase/Waste)별 정타 로그 오즈·타구속도 보정 (`BattedBallConfig.SolidLogitShiftByRegion`,
   `ExitVelocityKmhByRegion`), 전체 배율 `LeagueConfig.LocationEffectScale`(기본 1 = Statcast 근사, Unity TUNE에서 조절).
   Standard 프리셋 구역별 컨택률은 Heart 헛스윙 약 13%, Chase 약 47%로 조정. 목표: Heart 타율 .300·장타율 .550 근처, Chase 타율 .150 근처
@@ -123,7 +133,9 @@
   루킹 삼진이 나온다 (밸런스 비교 f: 타율 .260, K% 23%). 투수의 존 투구 비율을 보고 스윙 성향을 바꾸는 식으로 개선
 - 타구속도 × 발사각 표(`BalanceProbe --ev-la`, 시나리오 a 2000경기)에 남은 어긋남 (참고만):
   - 25~35도 <129 km/h(.19)가 129~145 km/h(.09)보다 조금 높다. 내야·외야 사이 60~80 m에 떨어지는 텍사스 안타 구간으로
-    실제 Statcast에도 약하게 있는 현상. 뜬공 BABIP .07(참고 .13)로 낮음
+    실제 Statcast에도 약하게 있는 현상. 뜬공 BABIP .08(참고 .13)로 낮음
+- 2루타가 안타의 16%(현실 약 20%), 2루타/타석 3.3%(참고 4.4%). 외야를 넘어가는 깊은 안타가 적은 탓(뜬공 BABIP와 같은 원인).
+  SLG는 목표 −.016으로 허용 범위 안이지만 여유가 적다
 - 카메라 원근 때문에 타이밍이 이르게 쏠리는 문제는 개인 보정으로 흡수 중. 근본 대책(잔상·통과 지점 표시)은 보류
 - 능력치 화면 표시는 OOTP처럼 1~100 스케일 (엔진 내부 20~80은 그대로, 표시할 때만 변환)
 - 나중에 설정에서 능력치 표시 방식(1~100 / 20~80 등)을 고를 수 있게
