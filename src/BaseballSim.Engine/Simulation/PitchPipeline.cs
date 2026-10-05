@@ -112,17 +112,18 @@ namespace BaseballSim.Engine.Simulation
         private PitchResolution ResolveBunt(ExecutedPitch executed, BatterAction action, Player batter,
             PlaySituationBuilder situationBuilder, IRandomSource random)
         {
-            if (random.NextDouble() >= Bunts.ContactProbability(batter.Batting, executed))
+            if (random.NextDouble() >= Bunts.ContactProbability(batter.Batting, executed, action.TimingQuality))
             {
                 return new PitchResolution { Result = PitchResult.SwingingStrike, IsBunt = true };
             }
 
-            if (random.NextDouble() < Bunts.FoulProbability(batter.Batting))
+            if (random.NextDouble() < Bunts.FoulProbability(batter.Batting, action.TimingQuality))
             {
                 return new PitchResolution { Result = PitchResult.Foul, IsBunt = true };
             }
 
-            PlayResult play = Bunts.ResolveFair(action.BuntType, batter.Batting, situationBuilder(), random, out BattedBall ball);
+            PlayResult play = Bunts.ResolveFair(action.BuntType, batter.Batting, situationBuilder(), random, out BattedBall ball,
+                action.TimingQuality);
             return new PitchResolution
             {
                 Result = PitchResult.InPlay,

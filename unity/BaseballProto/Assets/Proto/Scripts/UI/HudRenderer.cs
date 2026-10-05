@@ -15,12 +15,22 @@ namespace BaseballProto.UI
         private static readonly Color PanelColor = new Color(0f, 0f, 0f, 0.55f);
         private static readonly Color ButtonColor = new Color(0.12f, 0.12f, 0.16f, 0.85f);
         private static readonly Color ButtonOnColor = new Color(0.15f, 0.45f, 0.85f, 0.9f);
+        private static readonly Color ButtonOffColor = new Color(0.12f, 0.12f, 0.16f, 0.35f);
+        private static readonly Color DisabledTextColor = new Color(1f, 1f, 1f, 0.35f);
         private static readonly Color SwingColor = new Color(0.85f, 0.25f, 0.2f, 0.75f);
+        private static readonly Color BuntColor = new Color(0.15f, 0.65f, 0.55f, 0.8f);
         private static readonly Color BarBackColor = new Color(1f, 1f, 1f, 0.2f);
         private static readonly Color BarFillColor = new Color(1f, 0.8f, 0.2f, 0.9f);
         private static readonly Color SweetColor = new Color(0.2f, 1f, 0.3f, 0.6f);
         private static readonly Color PadColor = new Color(1f, 1f, 1f, 0.12f);
         private static readonly Color StatsColor = new Color(0.6f, 1f, 0.7f);
+        private static readonly Color BaseEmptyColor = new Color(1f, 1f, 1f, 0.25f);
+        private static readonly Color BaseOccupiedColor = new Color(1f, 0.85f, 0.2f, 0.95f);
+        private static readonly Color BaseStealColor = new Color(1f, 0.55f, 0.1f, 1f);
+
+        // 베이스 표시 (점수판 오른쪽): 칸 크기와 간격
+        private const float BaseCell = 22f;
+        private const float BaseSpacing = 26f;
 
         private const float DebugLineHeight = 26f;
         private const float DebugLineHeightLandscape = 22f;
@@ -53,6 +63,7 @@ namespace BaseballProto.UI
             _label.normal.textColor = StatsColor;
             Label(new Rect(info.x, info.y + 58f, info.width, 30f), who + duel.Stats, 21, _label);
             _label.normal.textColor = previous;
+            DrawBases(hud, info);
 
             // 디버그 (패널이 열려 있으면 가림)
             if (!hud.PanelRect.HasValue)
@@ -88,6 +99,16 @@ namespace BaseballProto.UI
 
             foreach (UiButton button in hud.Buttons)
             {
+                if (!button.Enabled)
+                {
+                    Fill(button.Rect, ButtonOffColor);
+                    Color text = _center.normal.textColor;
+                    _center.normal.textColor = DisabledTextColor;
+                    Label(button.Rect, button.Label, 22, _center);
+                    _center.normal.textColor = text;
+                    continue;
+                }
+
                 Fill(button.Rect, button.Highlighted ? ButtonOnColor : ButtonColor);
                 Label(button.Rect, button.Label, 22, _center);
             }
@@ -100,14 +121,52 @@ namespace BaseballProto.UI
 
             if (hud.SwingButtonVisible)
             {
-                Fill(hud.SwingButtonRect, SwingColor);
-                Label(hud.SwingButtonRect, "SWING", 36, _center);
+                bool bunt = duel.BuntStance;
+                Fill(hud.SwingButtonRect, bunt ? BuntColor : SwingColor);
+                Label(hud.SwingButtonRect, bunt ? "BUNT" : "SWING", 36, _center);
             }
 
             DrawHint(hud);
             if (hud.GaugeVisible)
             {
                 DrawGauge(hud);
+            }
+        }
+
+        /// <summary>
+        /// 루상 주자 다이아몬드 (점수판 오른쪽 위). 주자 있는 루는 노랑, 도루를 건 주자는 주황 + 아래에 "STEAL nB"
+        /// </summary>
+        private void DrawBases(Hud hud, Rect info)
+        {
+            BaseballSim.Engine.State.GameState state = hud.Duel.Engine?.State;
+            if (state == null)
+            {
+                return;
+            }
+
+            float cx = info.xMax - BaseSpacing * 1.6f;
+            float cy = info.y + BaseSpacing * 1.4f;
+            // 1루 오른쪽, 2루 위, 3루 왼쪽 (홈은 아래)
+            var centers = new[]
+            {
+                new Vector2(cx + BaseSpacing, cy), new Vector2(cx, cy - BaseSpacing), new Vector2(cx - BaseSpacing, cy),
+            };
+            int steal = hud.Duel.TacticsOpen ? hud.Duel.QueuedSteal : 0;
+            for (int b = 0; b < 3; b++)
+            {
+                Color color = state.Bases[b] == null ? BaseEmptyColor : b + 1 == steal ? BaseStealColor : BaseOccupiedColor;
+                Vector2 c = centers[b];
+                Fill(new Rect(c.x - BaseCell * 0.5f, c.y - BaseCell * 0.5f, BaseCell, BaseCell), color);
+            }
+
+            Fill(new Rect(cx - BaseCell * 0.3f, cy + BaseSpacing - BaseCell * 0.3f, BaseCell * 0.6f, BaseCell * 0.6f), BaseEmptyColor);
+            if (steal > 0)
+            {
+                // WebGL 기본 글꼴에는 화살표가 없어 글자로 표시
+                Color text = _center.normal.textColor;
+                _center.normal.textColor = BaseStealColor;
+                Label(new Rect(cx - 50f, cy + BaseSpacing * 1.3f, 100f, 24f), "STEAL " + (steal + 1) + "B", 18, _center);
+                _center.normal.textColor = text;
             }
         }
 
@@ -129,6 +188,10 @@ namespace BaseballProto.UI
             if (hud.Duel.CanSkip)
             {
                 hint = "Tap to skip";
+            }
+            else if (hud.Duel.BuntStance && !hud.Duel.AwaitingReady)
+            {
+                hint = "BUNT stance: swing input = bunt (aim + timing count)";
             }
             else if (hud.Duel.AwaitingReady)
             {

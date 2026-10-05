@@ -14,6 +14,9 @@ namespace BaseballSim.Engine.Fielding
 
         public DefensiveAlignment Defense { get; set; }
 
+        /// <summary>공격 팀 주루 성향 (추가 진루·태그업 판단)</summary>
+        public Control.BaserunningStyle BaserunningStyle { get; set; }
+
         /// <summary>base(1~3)에 주자가 있으면 반환</summary>
         public RunnerProfile RunnerOn(int baseNumber)
         {

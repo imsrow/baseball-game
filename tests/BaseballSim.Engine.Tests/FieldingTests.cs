@@ -1,3 +1,5 @@
+using BaseballSim.Engine.Pitching;
+using BaseballSim.Engine.Control;
 using System.Collections.Generic;
 using BaseballSim.Engine.Batting;
 using BaseballSim.Engine.Config;
@@ -224,6 +226,82 @@ namespace BaseballSim.Engine.Tests
             Assert.Contains(PlateAppearanceOutcome.GroundedIntoDoublePlay, seen);
             Assert.Contains(PlateAppearanceOutcome.FieldersChoice, seen);
             Assert.Contains(PlateAppearanceOutcome.GroundOut, seen);
+        }
+
+        [Fact]
+        public void 주루성향_공격적이면_추가진루가_늘고_신중하면_줄어든다()
+        {
+            var field = new FieldGeometry(_config.Field);
+            var resolver = new FieldingResolver(_config, field);
+            var defense = DefensiveAlignment.Build(p => TestData.Hitter(100 + (int)p, p), field, _config);
+
+            // 1루 주자, 외야 라이너·뜬공 안타가 나올 만한 타구: 1루 주자가 3루까지 가는 비율
+            int FirstToThird(BaserunningStyle style)
+            {
+                var rng = new Pcg32Random(77);
+                int count = 0;
+                for (int i = 0; i < 4000; i++)
+                {
+                    var s = new PlaySituation
+                    {
+                        OutsBefore = i % 2,
+                        Batter = new RunnerProfile(1, new BatterRatings(), Hand.Right),
+                        Defense = defense,
+                        BaserunningStyle = style,
+                    };
+                    s.Runners[0] = new RunnerProfile(10, new BatterRatings(), Hand.Right);
+                    var ball = new BattedBall { ExitVelocityKmh = rng.Range(135, 170), LaunchAngleDeg = rng.Range(5, 22),
+                        SprayAngleDeg = rng.Range(-40, 40), IsSolid = true };
+                    PlayResult r = resolver.Resolve(ball, s, rng);
+                    if (r.Movements.Exists(m => m.FromBase == 1 && m.ToBase >= 3))
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+
+            int normal = FirstToThird(BaserunningStyle.Normal);
+            Assert.True(FirstToThird(BaserunningStyle.Aggressive) > normal * 1.1, "공격적인데 3루 진루가 늘지 않음");
+            Assert.True(FirstToThird(BaserunningStyle.Cautious) < normal * 0.9, "신중한데 3루 진루가 줄지 않음");
+        }
+
+        [Fact]
+        public void 번트_입력품질은_능력치에_더해_결과를_보정한다()
+        {
+            var bunts = new BuntResolver(_config);
+            var batter = new BatterRatings();
+            var pitch = new ExecutedPitch { IsInZone = true };
+            double none = bunts.ContactProbability(batter, pitch);
+            Assert.True(bunts.ContactProbability(batter, pitch, 1.0) > none);
+            Assert.True(bunts.ContactProbability(batter, pitch, -1.0) < none);
+            Assert.Equal(none, bunts.ContactProbability(batter, pitch, 0.0), 10);
+            Assert.True(bunts.FoulProbability(batter, 1.0) < bunts.FoulProbability(batter));
+
+            // 희생번트 성공(타자 아웃 + 주자 진루) 비율
+            var field = new FieldGeometry(_config.Field);
+            var defense = DefensiveAlignment.Build(p => TestData.Hitter(100 + (int)p, p), field, _config);
+            double SacrificeRate(double? quality)
+            {
+                var rng = new Pcg32Random(5);
+                int ok = 0;
+                for (int i = 0; i < 3000; i++)
+                {
+                    var s = new PlaySituation { Batter = new RunnerProfile(1, batter, Hand.Right), Defense = defense };
+                    s.Runners[0] = new RunnerProfile(10, new BatterRatings(), Hand.Right);
+                    PlayResult r = bunts.ResolveFair(BuntType.Sacrifice, batter, s, rng, out BattedBall _, quality);
+                    if (r.Movements.Exists(m => m.FromBase == 1 && m.ToBase == 2 && !m.IsOut))
+                    {
+                        ok++;
+                    }
+                }
+
+                return ok / 3000.0;
+            }
+
+            Assert.True(SacrificeRate(1.0) > SacrificeRate(null));
+            Assert.True(SacrificeRate(-1.0) < SacrificeRate(null));
         }
 
         [Fact]

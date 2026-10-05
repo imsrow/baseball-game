@@ -60,6 +60,12 @@ namespace BaseballProto.Core
             _field.SetActorsVisible(true);
         }
 
+        /// <summary>도루 지시를 건 주자 표시 (0이면 해제)</summary>
+        public void MarkSteal(int fromBase)
+        {
+            _runners.MarkSteal(fromBase);
+        }
+
         public PlayScript Build(PitchEvent ev, Vector3 contact, float batterSide, PlayerDirectory players)
         {
             return _builder.Build(ev, contact, batterSide, players);

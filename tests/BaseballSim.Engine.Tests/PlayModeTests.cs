@@ -103,6 +103,78 @@ namespace BaseballSim.Engine.Tests
             Assert.True(checkedBalls > 20);
         }
 
+        // ───────────── 사람 감독: 작전만 사람, 교체는 AI ─────────────
+
+        private GameEngine TacticsEngine(ulong seed, bool offense, bool defense)
+        {
+            ControllerSet controllers = AiControllers.CreateAllAi();
+            foreach (TeamSide side in new[] { TeamSide.Away, TeamSide.Home })
+            {
+                controllers.Assign(side, new HumanManagerDecision
+                {
+                    HumanOffenseTactics = offense,
+                    HumanDefenseTactics = defense,
+                    SubstitutionsByAi = true,
+                });
+            }
+
+            return new GameEngine(TestData.AverageGame(), _config, seed, controllers);
+        }
+
+        [Fact]
+        public void 교체를_AI가_맡으면_걸어둔_작전이_없을때_멈추지_않고_경기가_끝난다()
+        {
+            GameEngine engine = TacticsEngine(41, true, true);
+            RunResult run = engine.RunUntil(StopConditions.EndOfGame);
+            Assert.Equal(RunStatus.GameOver, run.Status);
+            // 교체는 AI가 했다 (투수 교체가 한 번은 나온다)
+            Assert.Contains(engine.State.Log, e => e is SubstitutionEvent);
+        }
+
+        [Fact]
+        public void 걸어둔_고의4구와_도루가_적용된다()
+        {
+            GameEngine engine = TacticsEngine(42, true, true);
+            var home = (HumanManagerDecision)engine.Controllers.Manager(TeamSide.Home);
+            home.Queue(ManagerAction.IntentionalWalk());
+            engine.RunUntil(StopConditions.EndOfHalfInning());
+            // 수비 작전이 사람 담당이면 AI 고의4구는 없으므로, 나온 고의4구는 걸어둔 것
+            Assert.Contains(engine.State.Log, e => e is IntentionalWalkEvent);
+
+            // 1루 주자가 생기면 도루를 걸어둔다
+            var away = (HumanManagerDecision)engine.Controllers.Manager(TeamSide.Away);
+            bool stole = false;
+            for (int i = 0; i < 4000 && !engine.IsGameOver && !stole; i++)
+            {
+                if (engine.State.Phase == GamePhase.OffensePrePitch && engine.State.OffenseSide == TeamSide.Away
+                    && engine.State.Bases[0] != null && engine.State.Bases[1] == null)
+                {
+                    away.Queue(ManagerAction.Steal(1));
+                }
+
+                int before = engine.State.Log.Count;
+                engine.Step();
+                stole = engine.State.Log.Skip(before).OfType<PitchEvent>().Any(p => p.StealFromBase == 1);
+            }
+
+            Assert.True(stole, "걸어둔 도루가 한 번도 적용되지 않음");
+        }
+
+        [Fact]
+        public void 감독_세부설정과_주루성향은_저장된다()
+        {
+            GameEngine engine = TacticsEngine(43, true, false);
+            engine.State.Away.BaserunningStyle = BaserunningStyle.Aggressive;
+            StepN(engine, 300);
+            GameEngine loaded = GameEngine.Load(engine.Save(), _config, out SavedGame _);
+            var manager = Assert.IsType<HumanManagerDecision>(loaded.Controllers.Manager(TeamSide.Home));
+            Assert.True(manager.HumanOffenseTactics);
+            Assert.False(manager.HumanDefenseTactics);
+            Assert.True(manager.SubstitutionsByAi);
+            Assert.Equal(BaserunningStyle.Aggressive, loaded.State.Away.BaserunningStyle);
+            Assert.Equal(BaserunningStyle.Normal, loaded.State.Home.BaserunningStyle);
+        }
+
         [Fact]
         public void 설정이_바뀌면_불일치를_알린다()
         {

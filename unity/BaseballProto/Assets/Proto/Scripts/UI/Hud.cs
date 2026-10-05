@@ -3,6 +3,7 @@ using BaseballProto.Core;
 using BaseballProto.Feedback;
 using BaseballProto.Input;
 using BaseballSim.Engine.Config;
+using BaseballSim.Engine.Control;
 using BaseballSim.Engine.Pitching;
 using UnityEngine;
 
@@ -39,6 +40,10 @@ namespace BaseballProto.UI
         private const float LandscapeDebugRatio = 0.48f;
         private const float LandscapePanelMaxWidth = 640f;
         private const float CalibButtonWidth = 220f;
+        private const float TacticsRowHeight = 64f;
+        private const float TacticsRowHeightLandscape = 52f;
+        private const float TacticsMaxWidth = 760f;
+        private const float TacticsGap = 6f;
 
         private readonly DuelController _duel;
         private readonly BattingInput _batting;
@@ -199,6 +204,13 @@ namespace BaseballProto.UI
                     {
                         if (button.Rect.Contains(p))
                         {
+                            if (!button.Enabled)
+                            {
+                                // 비활성 버튼: 눌러도 아무 일 없고, 아래 화면 탭(다음 공)으로도 넘기지 않는다
+                                _consumedFingers.Add(e.FingerId);
+                                return true;
+                            }
+
                             button.OnPress();
                             _consumedFingers.Add(e.FingerId);
                             return true;
@@ -265,15 +277,77 @@ namespace BaseballProto.UI
                 float startY = Landscape ? safe.yMax - StartButtonHeight - 30f : safe.y + safe.height * PortraitStartY;
                 var start = new Rect(safe.center.x - StartButtonWidth * 0.5f, startY, StartButtonWidth, StartButtonHeight);
                 Buttons.Add(new UiButton(start, "START", _duel.RequestPitch, true));
-                if (Landscape)
+                float tacticsTop = LayoutTactics(safe, start);
+                if (Landscape || tacticsTop < start.y)
                 {
-                    hintY = start.y - 44f;
+                    hintY = tacticsTop - 44f;
                 }
             }
 
             float hintX = DragPadVisible ? DragPadRect.xMax + Margin : safe.x + Margin;
             float hintW = (SwingButtonVisible && Landscape ? SwingButtonRect.x : safe.xMax - Margin) - hintX;
             HintRect = new Rect(hintX, hintY, Mathf.Max(100f, hintW), 34f);
+        }
+
+        /// <summary>
+        /// 작전 버튼 (START 바로 위 한 줄). 타격 모드: 도루(1루·2루 주자), 희생번트, 기습번트, 주루 성향 / 투구 모드: 고의4구.
+        /// 상황에 안 맞는 버튼은 비활성
+        /// </summary>
+        /// <returns>작전 줄 맨 위 y (작전 줄이 없으면 START 위)</returns>
+        private float LayoutTactics(Rect safe, Rect start)
+        {
+            if (!_duel.TacticsOpen)
+            {
+                return start.y;
+            }
+
+            var items = new List<(string Label, System.Action Press, bool On, bool Enabled)>();
+            if (_duel.Mode == DuelMode.Batting)
+            {
+                items.Add(("STEAL 2B", () => _duel.ToggleSteal(1), _duel.QueuedSteal == 1, _duel.CanSteal(1)));
+                items.Add(("STEAL 3B", () => _duel.ToggleSteal(2), _duel.QueuedSteal == 2, _duel.CanSteal(2)));
+                items.Add(("SAC BUNT", () => _duel.ToggleBunt(BuntType.Sacrifice), _duel.QueuedBunt == BuntType.Sacrifice,
+                    _duel.CanBunt(BuntType.Sacrifice)));
+                items.Add(("DRAG BUNT", () => _duel.ToggleBunt(BuntType.ForHit), _duel.QueuedBunt == BuntType.ForHit,
+                    _duel.CanBunt(BuntType.ForHit)));
+                items.Add(("RUN: " + RunStyleName(_duel.RunStyle), _duel.CycleRunStyle, _duel.RunStyle != BaserunningStyle.Normal, true));
+            }
+            else
+            {
+                items.Add(("INTENT. WALK", _duel.ToggleIntentionalWalk, _duel.QueuedIntentionalWalk, _duel.CanIntentionalWalk));
+            }
+
+            float height = Landscape ? TacticsRowHeightLandscape : TacticsRowHeight;
+
+            // 가로 드래그 모드: 왼쪽 패드와 오른쪽 스윙 버튼 사이에만
+            float minX = DragPadVisible ? DragPadRect.xMax + Margin : safe.x + Margin;
+            float maxX = SwingButtonVisible && Landscape ? SwingButtonRect.x - Margin : safe.xMax - Margin;
+            float rowWidth = Mathf.Min(TacticsMaxWidth, maxX - minX);
+            if (items.Count == 1)
+            {
+                rowWidth = Mathf.Min(rowWidth, start.width);
+            }
+
+            float width = (rowWidth - TacticsGap * (items.Count - 1)) / items.Count;
+            float left = Mathf.Clamp(safe.center.x - rowWidth * 0.5f, minX, maxX - rowWidth);
+            float top = start.y - height - 12f;
+            for (int i = 0; i < items.Count; i++)
+            {
+                var rect = new Rect(left + i * (width + TacticsGap), top, width, height);
+                Buttons.Add(new UiButton(rect, items[i].Label, items[i].Press, items[i].On, items[i].Enabled));
+            }
+
+            return top;
+        }
+
+        private static string RunStyleName(BaserunningStyle style)
+        {
+            switch (style)
+            {
+                case BaserunningStyle.Aggressive: return "AGGR";
+                case BaserunningStyle.Cautious: return "SAFE";
+                default: return "NORM";
+            }
         }
 
         /// <returns>버튼·게이지 영역의 맨 위 y</returns>
@@ -387,17 +461,24 @@ namespace BaseballProto.UI
         {
             FeedbackSettings s = _impact.Settings;
             float rowHeight = Landscape ? FxRowHeightLandscape : FxRowHeight;
-            float y = panelTop;
-            float width = Landscape ? Mathf.Min(LandscapePanelMaxWidth, safe.width - Margin * 2f) : safe.width - Margin * 2f;
-            float x = safe.x + Margin;
+
+            // 가로 화면은 두 줄(열)로 나눠 아래쪽 조작 영역(START·작전 버튼)과 겹치지 않게
+            const int rowCount = 9;
+            int columns = Landscape ? 2 : 1;
+            int rowsPerColumn = (rowCount + columns - 1) / columns;
+            float width = Landscape
+                ? Mathf.Min(LandscapePanelMaxWidth * 0.75f, (safe.width - Margin * (columns + 1)) / columns)
+                : safe.width - Margin * 2f;
+            int index = 0;
 
             void Add(UiButton button)
             {
                 Buttons.Add(button);
-                y += rowHeight + 6f;
+                index++;
             }
 
-            Rect Row() => new Rect(x, y, width, rowHeight);
+            Rect Row() => new Rect(safe.x + Margin + (index / rowsPerColumn) * (width + Margin),
+                panelTop + (index % rowsPerColumn) * (rowHeight + 6f), width, rowHeight);
 
             Add(_impact.HapticsSupported
                 ? Toggle(Row(), "Vibration", s.Vibration, () => s.Vibration = !s.Vibration)
@@ -410,7 +491,8 @@ namespace BaseballProto.UI
             Add(new UiButton(Row(), "Play speed: " + SpeedName(_tuning.PlaySpeed) + "  (tap to change)", CyclePlaySpeed));
             Add(Toggle(Row(), "Auto play (AI swings/pitches)", _tuning.AutoPlay, () => _tuning.AutoPlay = !_tuning.AutoPlay));
             Add(Toggle(Row(), "Cursor log (csv)", _trace.Enabled, () => _trace.SetEnabled(!_trace.Enabled)));
-            PanelRect = new Rect(0f, panelTop - 6f, x + width + Margin, y - panelTop + 12f);
+            float panelWidth = safe.x + Margin + columns * (width + Margin);
+            PanelRect = new Rect(0f, panelTop - 6f, panelWidth, rowsPerColumn * (rowHeight + 6f) + 12f);
         }
 
         private static readonly float[] PlaySpeeds = { 1f, 1.5f, 2f };

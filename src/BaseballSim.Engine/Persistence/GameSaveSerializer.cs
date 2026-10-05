@@ -23,9 +23,9 @@ namespace BaseballSim.Engine.Persistence
     {
         // "BBSV" (파일 식별자)
         private const int Magic = 0x56534242;
-        private const int FormatVersion = 2;
+        private const int FormatVersion = 3;
 
-        /// <summary>읽을 수 있는 가장 오래된 형식 (v1: 타구 연출용 시각 없음)</summary>
+        /// <summary>읽을 수 있는 가장 오래된 형식 (v1: 타구 연출용 시각 없음, v2: 감독 세부 설정·주루 성향 없음)</summary>
         private const int MinReadableVersion = 1;
 
         // 이벤트 종류 태그
@@ -90,6 +90,9 @@ namespace BaseballSim.Engine.Persistence
                 }
 
                 w.Bool(modes.ManagerDelegatedToAi[side]);
+                w.Bool(modes.HumanOffenseTactics[side]);
+                w.Bool(modes.HumanDefenseTactics[side]);
+                w.Bool(modes.SubstitutionsByAi[side]);
             }
         }
 
@@ -104,6 +107,12 @@ namespace BaseballSim.Engine.Persistence
                 }
 
                 modes.ManagerDelegatedToAi[side] = r.Bool();
+                if (r.Version >= 3)
+                {
+                    modes.HumanOffenseTactics[side] = r.Bool();
+                    modes.HumanDefenseTactics[side] = r.Bool();
+                    modes.SubstitutionsByAi[side] = r.Bool();
+                }
             }
 
             return modes;
@@ -351,6 +360,7 @@ namespace BaseballSim.Engine.Persistence
             w.Int(t.Runs);
             w.Int(t.Hits);
             w.Int(t.Errors);
+            w.Int((int)t.BaserunningStyle);
         }
 
         private static TeamGameState ReadTeam(SaveReader r)
@@ -386,6 +396,11 @@ namespace BaseballSim.Engine.Persistence
             t.Runs = r.Int();
             t.Hits = r.Int();
             t.Errors = r.Int();
+            if (r.Version >= 3)
+            {
+                t.BaserunningStyle = (BaserunningStyle)r.Int();
+            }
+
             return t;
         }
 

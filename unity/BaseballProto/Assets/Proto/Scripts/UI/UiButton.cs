@@ -8,12 +8,13 @@ namespace BaseballProto.UI
     /// </summary>
     public sealed class UiButton
     {
-        public UiButton(Rect rect, string label, Action onPress, bool highlighted = false)
+        public UiButton(Rect rect, string label, Action onPress, bool highlighted = false, bool enabled = true)
         {
             Rect = rect;
             Label = label;
             OnPress = onPress;
             Highlighted = highlighted;
+            Enabled = enabled;
         }
 
         public Rect Rect { get; }
@@ -23,5 +24,8 @@ namespace BaseballProto.UI
         public Action OnPress { get; }
 
         public bool Highlighted { get; }
+
+        /// <summary>비활성: 흐리게 그리고, 눌러도 아무 일 없다 (터치는 HUD가 먹는다)</summary>
+        public bool Enabled { get; }
     }
 }

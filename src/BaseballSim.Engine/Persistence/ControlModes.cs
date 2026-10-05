@@ -14,6 +14,13 @@ namespace BaseballSim.Engine.Persistence
         /// <summary>팀별 "작전·교체는 AI에게 맡김"</summary>
         public bool[] ManagerDelegatedToAi { get; } = new bool[2];
 
+        /// <summary>팀별 사람 감독 세부 설정 (HumanManagerDecision과 같은 뜻, 구버전 저장은 기본값)</summary>
+        public bool[] HumanOffenseTactics { get; } = { true, true };
+
+        public bool[] HumanDefenseTactics { get; } = { true, true };
+
+        public bool[] SubstitutionsByAi { get; } = new bool[2];
+
         public bool IsHuman(TeamSide side, DecisionRole role) => Human[(int)side, (int)role];
 
         public static ControlModes From(ControllerSet controllers)
@@ -29,6 +36,9 @@ namespace BaseballSim.Engine.Persistence
                 if (controllers.Manager(side) is HumanManagerDecision human)
                 {
                     modes.ManagerDelegatedToAi[(int)side] = human.DelegateToAi;
+                    modes.HumanOffenseTactics[(int)side] = human.HumanOffenseTactics;
+                    modes.HumanDefenseTactics[(int)side] = human.HumanDefenseTactics;
+                    modes.SubstitutionsByAi[(int)side] = human.SubstitutionsByAi;
                 }
             }
 

@@ -78,7 +78,7 @@
   - A: 상태 머신, 투구 판정(실행·인지·스윙·컨택), 타구 생성·비행, 물리 기반 수비·주루, 기본 AI, 검증 하네스
   - B: 도루·번트·폭투·포일·낫아웃, 고의4구, 대타·대주자·대수비, 불펜 역할(마무리·셋업)
   - C: 직접↔시뮬 전환, 멈춤 조건, 사람 감독 흐름, 저장/불러오기
-- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 106개 통과 (엔진 101, 연출 대본 5)
+- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 111개 통과 (엔진 106, 연출 대본 5)
 - 타구 판정 조정 (2026-10-05, `--ev-la` 기준): 강한 라이너(161+, 10~25도) 아웃 31% → 21%, 약한 뜬공 역전 축소,
   강한 고각 타구에 펜스 앞 아웃. 방법:
   - 양력은 `BallPhysicsConfig.LiftStartDeg`(15도)부터 증가 → 라이너가 낮고 짧게 날아감
@@ -130,6 +130,19 @@
   - 타구 카메라 중에는 스트라이크 존 네모·커서·투구 위치 링을 숨긴다
   - 검증: 대본 불변식(공이 엔진 지점 통과, 아웃이면 공 먼저/세이프면 주자 먼저, 야수 속도)을 AI 1만여 타구로 확인했다 (Unity 밖에서 스텁으로 컴파일).
     시각 확인은 PlaySnapshots
+
+- 작전·주루 (2026-10-05):
+  - 감독은 사람(`HumanManagerDecision`)이지만 교체는 AI: `SubstitutionsByAi = true`. 작전 담당은 모드별로
+    `HumanOffenseTactics`(타격 모드: 도루·번트) / `HumanDefenseTactics`(투구 모드: 고의4구). 셋 다 저장된다(저장 형식 v3)
+  - 흐름: Unity `TacticsPoint` 멈춤 조건으로 사람 작전 결정 직전(타격 모드 매 투구 전 `OffensePrePitch`, 투구 모드 타석 시작
+    `DefenseManager`)에서 멈추고, START 전에 작전 버튼을 받아 대기열에 건 뒤 그 결정 지점을 `Step()`. 이어지는 투구는 START를 다시 묻지 않음
+  - 작전 버튼 (START 위 한 줄): STEAL 2B/3B(주자별), SAC BUNT, DRAG BUNT, RUN 성향 / 투구 모드 INTENT. WALK. 상황에 안 맞으면 비활성
+  - 번트는 자세 토글: 켜면 SWING 버튼이 BUNT(초록), 같은 타석 동안 유지(2스트라이크·새 타석이면 해제). 스윙 입력이 번트가 되고
+    커서·타이밍 품질이 번트 로그 오즈를 보정 (`InputModifierConfig.MaxBuntLogitShift/Penalty` 0.4/0.4, 엔진 `BuntResolver`. AI는 보정 없음)
+  - 도루를 건 주자: 3D 모양 주황·리드 크게, HUD 점수판 오른쪽 루상 다이아몬드에도 주황 + "STEAL nB"
+  - 주루 성향 `TeamGameState.BaserunningStyle` (보통/공격적/신중): 추가 진루·태그업 필요 여유 시간에
+    `BaserunningConfig.AggressiveMarginShiftS`(−0.25) / `CautiousMarginShiftS`(+0.30). AI는 보통(0)이라 하네스 결과 그대로
+  - 2아웃 땅볼 연출 버그: 엔진은 이닝 종료 플레이에서 주자를 제자리로 기록 (결과는 맞음). 연출이 세 번째 아웃까지 뛰게 고침
 
 ### Unity TUNE 기본값 (2단계 종료 시점)
 

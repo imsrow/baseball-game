@@ -31,6 +31,9 @@ namespace BaseballProto.View
         public static readonly Color Fielder = new Color(0.20f, 0.30f, 0.65f);
         public static readonly Color Runner = new Color(0.75f, 0.22f, 0.20f);
         public static readonly Color RunnerOut = new Color(0.45f, 0.45f, 0.48f);
+
+        /// <summary>도루 지시를 건 주자</summary>
+        public static readonly Color RunnerSteal = new Color(1f, 0.6f, 0.1f);
         public static readonly Color Skin = new Color(0.93f, 0.78f, 0.62f);
         public static readonly Color Wall = new Color(0.12f, 0.30f, 0.20f);
         public static readonly Color InfieldGrass = new Color(0.25f, 0.53f, 0.25f);

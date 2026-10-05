@@ -10,6 +10,7 @@ namespace BaseballSim.Engine.Control
     /// 걸어둔 것이 없으면 "작전 없음"으로 바로 진행한다 (멈추지 않는다).
     /// 단, AI라면 교체할 의미 있는 순간(투수 피로 임계치, 대타·대수비 기회)에는 추천과 함께 입력을 기다린다.
     /// DelegateToAi를 켜면 작전·교체를 모두 AI에게 맡긴다.
+    /// 세부 설정으로 작전 일부만 사람이 맡을 수 있다: 공격 작전(도루·번트) / 수비 작전(고의4구) / 교체(투수 교체·대타·대주자·대수비)는 AI.
     /// </summary>
     public sealed class HumanManagerDecision : IManagerDecision
     {
@@ -20,6 +21,15 @@ namespace BaseballSim.Engine.Control
 
         /// <summary>작전·교체를 AI에게 맡김</summary>
         public bool DelegateToAi { get; set; }
+
+        /// <summary>공격 작전(도루·번트)을 사람이 (false면 AI)</summary>
+        public bool HumanOffenseTactics { get; set; } = true;
+
+        /// <summary>수비 작전(고의4구)을 사람이 (false면 AI)</summary>
+        public bool HumanDefenseTactics { get; set; } = true;
+
+        /// <summary>교체(투수 교체·대타·대주자·대수비)는 AI가 정하고 묻지 않는다</summary>
+        public bool SubstitutionsByAi { get; set; }
 
         /// <summary>미리 걸어둔 지시 (적용되거나 무효가 되면 제거)</summary>
         public IReadOnlyList<ManagerAction> Queued => _queued;
@@ -38,7 +48,7 @@ namespace BaseballSim.Engine.Control
 
         public Decision<ManagerOrders> DecidePrePitch(ManagerContext context)
         {
-            if (DelegateToAi)
+            if (DelegateToAi || !HumanOffenseTactics)
             {
                 return _ai.DecidePrePitch(context);
             }
@@ -48,7 +58,7 @@ namespace BaseballSim.Engine.Control
 
         public Decision<ManagerOrders> DecideOffense(ManagerContext context)
         {
-            if (DelegateToAi)
+            if (DelegateToAi || SubstitutionsByAi)
             {
                 return _ai.DecideOffense(context);
             }
@@ -69,6 +79,27 @@ namespace BaseballSim.Engine.Control
             if (DelegateToAi)
             {
                 return _ai.DecideDefense(context);
+            }
+
+            if (SubstitutionsByAi)
+            {
+                // 교체는 AI 그대로, 고의4구만 담당에 따라 (사람이면 걸어둔 것만)
+                ManagerOrders ai = _ai.DecideDefense(context).Value;
+                var orders = new ManagerOrders();
+                foreach (ManagerAction action in ai.Actions)
+                {
+                    if (action.Type != ManagerActionType.IntentionalWalk || !HumanDefenseTactics)
+                    {
+                        orders.Actions.Add(action);
+                    }
+                }
+
+                if (HumanDefenseTactics)
+                {
+                    orders.Actions.AddRange(TakeQueued(ManagerActionType.IntentionalWalk).Actions);
+                }
+
+                return Decision<ManagerOrders>.Ready(orders);
             }
 
             ManagerOrders queued = TakeQueued(ManagerActionType.PitchingChange, ManagerActionType.DefensiveSubstitution,

@@ -265,7 +265,7 @@ namespace BaseballSim.Engine.Fielding
                         + catcher.ThrowTime(flight.CatchPoint, _field.Base(target));
                     double trueMargin = throwArrival - arrival;
                     double estimate = trueMargin + random.NextGaussian() * _running.EstimateNoise(runner);
-                    if (estimate > _running.RequiredMargin(runner))
+                    if (estimate > _running.RequiredMargin(runner, situation.BaserunningStyle))
                     {
                         chosen = target;
                         if (trueMargin < bestMargin)

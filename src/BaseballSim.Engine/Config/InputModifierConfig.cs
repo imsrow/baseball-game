@@ -21,6 +21,12 @@ namespace BaseballSim.Engine.Config
         /// <summary>스윙 타이밍 품질 −1(나쁜 입력)일 때 정타 로그 오즈 최대 감소 (양수로 지정)</summary>
         public double MaxSwingSolidLogitPenalty { get; set; } = 0.40;
 
+        /// <summary>번트 입력 품질 +1(좋은 입력)일 때 번트 로그 오즈 최대 증가 (컨택·페어·성공 모두). 사람 입력만, AI는 보정 없음</summary>
+        public double MaxBuntLogitShift { get; set; } = 0.40;
+
+        /// <summary>번트 입력 품질 −1(나쁜 입력)일 때 번트 로그 오즈 최대 감소 (양수로 지정)</summary>
+        public double MaxBuntLogitPenalty { get; set; } = 0.40;
+
         /// <summary>스윙 타이밍 방향 ±1일 때 타구 방향각 평균 최대 이동 (도). 이르면 당겨치기 쪽</summary>
         public double MaxTimingSprayShiftDeg { get; set; } = 20.0;
 
@@ -37,6 +43,12 @@ namespace BaseballSim.Engine.Config
         public double SwingSolidLogitShift(double quality)
         {
             return Asymmetric(quality, MaxSwingSolidLogitShift, MaxSwingSolidLogitPenalty);
+        }
+
+        /// <summary>번트 품질(−1~+1) → 번트 로그 오즈 보정 (번트 능력치 보정에 더해짐). + 쪽은 보상 상한, − 쪽은 벌칙 상한</summary>
+        public double BuntLogitShift(double quality)
+        {
+            return Asymmetric(quality, MaxBuntLogitShift, MaxBuntLogitPenalty);
         }
 
         private static double Asymmetric(double quality, double bonus, double penalty)

@@ -23,11 +23,17 @@ namespace BaseballSim.Engine.Batting
             _config = config;
         }
 
+        /// <summary>사람 번트 입력 품질 보정 (번트 능력치 로그 오즈에 더한다). AI(null)는 0</summary>
+        private double InputShift(double? quality)
+        {
+            return quality.HasValue ? _config.InputModifier.BuntLogitShift(quality.Value) : 0.0;
+        }
+
         /// <summary>번트 컨택(파울 포함) 확률</summary>
-        public double ContactProbability(BatterRatings batter, ExecutedPitch pitch)
+        public double ContactProbability(BatterRatings batter, ExecutedPitch pitch, double? quality = null)
         {
             BuntConfig bc = _config.Bunt;
-            double shift = bc.BuntBeta * ScoutScale.ToZ(batter.Bunt);
+            double shift = bc.BuntBeta * ScoutScale.ToZ(batter.Bunt) + InputShift(quality);
             if (!pitch.IsInZone)
             {
                 shift += bc.OutOfZoneContactShift;
@@ -37,9 +43,9 @@ namespace BaseballSim.Engine.Batting
         }
 
         /// <summary>컨택한 번트 중 파울 확률</summary>
-        public double FoulProbability(BatterRatings batter)
+        public double FoulProbability(BatterRatings batter, double? quality = null)
         {
-            return LogOdds.Shift(_config.Bunt.FoulRate, -_config.Bunt.BuntBeta * ScoutScale.ToZ(batter.Bunt));
+            return LogOdds.Shift(_config.Bunt.FoulRate, -_config.Bunt.BuntBeta * ScoutScale.ToZ(batter.Bunt) - InputShift(quality));
         }
 
         /// <summary>요청한 번트 종류를 상황에 맞게 정리 (주자가 없으면 기습번트)</summary>
@@ -61,7 +67,7 @@ namespace BaseballSim.Engine.Batting
 
         /// <summary>페어 번트 결과</summary>
         public PlayResult ResolveFair(BuntType requested, BatterRatings batter, PlaySituation situation,
-            IRandomSource random, out BattedBall ball)
+            IRandomSource random, out BattedBall ball, double? quality = null)
         {
             BuntConfig bc = _config.Bunt;
             BuntType type = EffectiveType(requested, situation);
@@ -74,8 +80,9 @@ namespace BaseballSim.Engine.Batting
 
             double speedZ = ScoutScale.ToZ(batter.Speed);
             double buntZ = ScoutScale.ToZ(batter.Bunt);
+            double input = InputShift(quality);
             double hitRate = type == BuntType.Sacrifice ? bc.SacrificeHitRate : bc.BuntForHitRate;
-            double hit = LogOdds.Shift(hitRate, bc.SpeedBeta * speedZ + bc.BuntBeta * buntZ);
+            double hit = LogOdds.Shift(hitRate, bc.SpeedBeta * speedZ + bc.BuntBeta * buntZ + input);
             if (random.NextDouble() < hit)
             {
                 result.Outcome = PlateAppearanceOutcome.Single;
@@ -84,7 +91,7 @@ namespace BaseballSim.Engine.Batting
             }
 
             bool sacrificeWorks = type == BuntType.ForHit
-                || random.NextDouble() < LogOdds.Shift(bc.SacrificeSuccessRate, bc.BuntBeta * buntZ);
+                || random.NextDouble() < LogOdds.Shift(bc.SacrificeSuccessRate, bc.BuntBeta * buntZ + input);
             if (sacrificeWorks)
             {
                 // 타자 1루 아웃, 1·2루 주자 진루 (3루 주자는 밀려날 때만)

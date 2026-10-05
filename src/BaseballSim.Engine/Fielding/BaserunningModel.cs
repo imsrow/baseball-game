@@ -1,5 +1,6 @@
 using System;
 using BaseballSim.Engine.Config;
+using BaseballSim.Engine.Control;
 using BaseballSim.Engine.Players;
 using BaseballSim.Engine.Ratings;
 
@@ -60,9 +61,21 @@ namespace BaseballSim.Engine.Fielding
         }
 
         /// <summary>추가 진루 시도에 필요한 예상 여유 시간</summary>
-        public double RequiredMargin(RunnerProfile runner)
+        public double RequiredMargin(RunnerProfile runner, BaserunningStyle style = BaserunningStyle.Normal)
         {
-            return _config.AdvanceMarginS - _config.InstinctMarginPerSdS * ScoutScale.ToZ(runner.Ratings.BaserunningInstinct);
+            return _config.AdvanceMarginS - _config.InstinctMarginPerSdS * ScoutScale.ToZ(runner.Ratings.BaserunningInstinct)
+                + StyleShift(style);
+        }
+
+        /// <summary>팀 주루 성향에 따른 필요 여유 시간 변화 (Normal은 0)</summary>
+        public double StyleShift(BaserunningStyle style)
+        {
+            switch (style)
+            {
+                case BaserunningStyle.Aggressive: return _config.AggressiveMarginShiftS;
+                case BaserunningStyle.Cautious: return _config.CautiousMarginShiftS;
+                default: return 0.0;
+            }
         }
     }
 }

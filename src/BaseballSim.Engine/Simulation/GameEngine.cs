@@ -100,7 +100,13 @@ namespace BaseballSim.Engine.Simulation
 
                 if (modes.IsHuman(side, DecisionRole.Manager))
                 {
-                    set.Assign(side, new HumanManagerDecision { DelegateToAi = modes.ManagerDelegatedToAi[(int)side] });
+                    set.Assign(side, new HumanManagerDecision
+                    {
+                        DelegateToAi = modes.ManagerDelegatedToAi[(int)side],
+                        HumanOffenseTactics = modes.HumanOffenseTactics[(int)side],
+                        HumanDefenseTactics = modes.HumanDefenseTactics[(int)side],
+                        SubstitutionsByAi = modes.SubstitutionsByAi[(int)side],
+                    });
                 }
             }
 
@@ -1119,6 +1125,7 @@ namespace BaseballSim.Engine.Simulation
                 OutsBefore = _state.Outs,
                 Batter = new RunnerProfile(batter.Id, batter.Batting, battingHand),
                 Defense = DefensiveAlignment.Build(p => _players.Get(defense.PlayerIdAt(p)), _pipeline.Field, _config),
+                BaserunningStyle = _state.Offense.BaserunningStyle,
             };
             for (int b = 0; b < 3; b++)
             {

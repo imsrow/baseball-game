@@ -13,9 +13,15 @@ namespace BaseballProto.View
     {
         private const float BaseStandOffsetM = 0.8f;
 
+        // 도루 지시를 건 주자는 리드를 더 크게
+        private const float StealLeadM = 3f;
+
         private readonly Transform _parent;
         private readonly FieldGeometry _field;
         private readonly Dictionary<int, FigureView> _figures = new Dictionary<int, FigureView>();
+
+        // 투구 사이 루상 주자 (인덱스 0 = 1루), 없으면 null
+        private readonly FigureView[] _onBase = new FigureView[3];
 
         public RunnersView(Transform parent, FieldGeometry field)
         {
@@ -49,6 +55,7 @@ namespace BaseballProto.View
             for (int b = 0; b < 3; b++)
             {
                 BaseRunner runner = state.Bases[b];
+                _onBase[b] = null;
                 if (runner == null)
                 {
                     continue;
@@ -59,6 +66,25 @@ namespace BaseballProto.View
                 FigureView figure = Get(runner.PlayerId);
                 figure.SetColor(ProtoColors.Runner);
                 figure.Visible = true;
+                figure.Snap(lead, Vector3.zero);
+                _onBase[b] = figure;
+            }
+        }
+
+        /// <summary>도루 지시를 건 주자 표시 (fromBase 1·2, 0이면 해제): 주황색, 리드 크게</summary>
+        public void MarkSteal(int fromBase)
+        {
+            for (int b = 0; b < 3; b++)
+            {
+                FigureView figure = _onBase[b];
+                if (figure == null)
+                {
+                    continue;
+                }
+
+                bool stealing = b + 1 == fromBase;
+                figure.SetColor(stealing ? ProtoColors.RunnerSteal : ProtoColors.Runner);
+                Vector3 lead = Vector3.MoveTowards(Point(b + 1), Point(b + 2), stealing ? StealLeadM : BaseStandOffsetM);
                 figure.Snap(lead, Vector3.zero);
             }
         }

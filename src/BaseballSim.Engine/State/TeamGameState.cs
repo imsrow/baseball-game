@@ -36,6 +36,9 @@ namespace BaseballSim.Engine.State
         /// <summary>교체되어 재출전할 수 없는 선수</summary>
         public List<int> Removed { get; set; } = new List<int>();
 
+        /// <summary>주루 성향 (추가 진루·태그업 판단). 사람 감독이 바꾼다, AI는 Normal</summary>
+        public Control.BaserunningStyle BaserunningStyle { get; set; }
+
         public int Runs { get; set; }
 
         public int Hits { get; set; }

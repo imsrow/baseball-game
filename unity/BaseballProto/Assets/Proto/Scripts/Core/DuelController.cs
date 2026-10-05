@@ -42,6 +42,7 @@ namespace BaseballProto.Core
         private readonly PitchingInput _pitching;
         private readonly ImpactFeedback _impact;
         private readonly PlayDirector _director;
+        private readonly HumanManagerDecision[] _managers = new HumanManagerDecision[2];
 
         private GameEngine _engine;
         private int _gameCount;
@@ -107,7 +108,92 @@ namespace BaseballProto.Core
 
         private bool _readyRequested;
         private bool _skipRequested;
+
+        // 작전 결정 지점에서 START를 이미 받았으면 이어지는 투구에서 다시 기다리지 않는다
+        private bool _readyConfirmed;
+        private bool _atTactics;
+        private int _stealFrom;
+        private BuntType _bunt;
+        private int _buntPlateAppearance;
+        private bool _intentionalWalk;
         private int _statsIndex;
+
+        /// <summary>작전 버튼을 받는 중 (다음 공 대기 + 사람 작전 결정 직전)</summary>
+        public bool TacticsOpen => AwaitingReady && _atTactics;
+
+        /// <summary>주루 성향 (타격 모드에서 사람 팀에 적용, 경기가 바뀌어도 유지)</summary>
+        public BaserunningStyle RunStyle { get; private set; } = BaserunningStyle.Normal;
+
+        public int QueuedSteal => _stealFrom;
+
+        public BuntType QueuedBunt => _bunt;
+
+        public bool QueuedIntentionalWalk => _intentionalWalk;
+
+        public bool CanSteal(int fromBase)
+        {
+            BaseRunner[] bases = _engine?.State.Bases;
+            return TacticsOpen && Mode == DuelMode.Batting && bases != null && bases[fromBase - 1] != null && bases[fromBase] == null;
+        }
+
+        public bool CanBunt(BuntType type)
+        {
+            if (!TacticsOpen || Mode != DuelMode.Batting)
+            {
+                return false;
+            }
+
+            GameState state = _engine.State;
+            bool twoStrikes = state.Strikes >= _config.Rules.StrikesForStrikeout - 1;
+            if (type == BuntType.Sacrifice)
+            {
+                bool runners = state.Bases[0] != null || state.Bases[1] != null || state.Bases[2] != null;
+                return !twoStrikes && runners && state.Outs < _config.Rules.OutsPerHalfInning - 1;
+            }
+
+            return !twoStrikes;
+        }
+
+        public bool CanIntentionalWalk => TacticsOpen && Mode == DuelMode.Pitching;
+
+        /// <summary>번트 자세 (번트 버튼을 켰거나 이번 투구에 번트 사인이 걸림): SWING 버튼이 BUNT로 바뀐다</summary>
+        public bool BuntStance => Mode == DuelMode.Batting && (_bunt != BuntType.None
+            || (_engine != null && _engine.State.BuntSign != BuntType.None && Phase != DuelPhase.Ready));
+
+        public void ToggleSteal(int fromBase)
+        {
+            if (CanSteal(fromBase))
+            {
+                _stealFrom = _stealFrom == fromBase ? 0 : fromBase;
+                _director.MarkSteal(_stealFrom);
+            }
+        }
+
+        public void ToggleBunt(BuntType type)
+        {
+            if (CanBunt(type))
+            {
+                _bunt = _bunt == type ? BuntType.None : type;
+                _buntPlateAppearance = _engine.State.PlateAppearanceNumber;
+            }
+        }
+
+        public void ToggleIntentionalWalk()
+        {
+            if (CanIntentionalWalk)
+            {
+                _intentionalWalk = !_intentionalWalk;
+            }
+        }
+
+        /// <summary>주루 성향 순환: 보통 → 공격적 → 신중</summary>
+        public void CycleRunStyle()
+        {
+            RunStyle = RunStyle == BaserunningStyle.Normal ? BaserunningStyle.Aggressive
+                : RunStyle == BaserunningStyle.Aggressive ? BaserunningStyle.Cautious
+                : BaserunningStyle.Normal;
+            ApplyRunStyle();
+        }
 
         /// <summary>인플레이 연출 중 (탭하면 결과로 바로)</summary>
         public bool CanSkip { get; private set; }
@@ -149,12 +235,18 @@ namespace BaseballProto.Core
                     NewGame();
                 }
 
-                RunResult run = _engine.RunUntil(NeverStop.Instance);
+                RunResult run = _engine.RunUntil(new TacticsPoint(Mode));
                 UpdateStats();
                 if (run.Status == RunStatus.GameOver)
                 {
                     ShowHeadline("GAME OVER  " + _engine.State.AwayScore + " : " + _engine.State.HomeScore, GameOverHoldS);
                     yield return _host.StartCoroutine(Wait(GameOverHoldS));
+                    continue;
+                }
+
+                if (run.Status == RunStatus.ConditionMet)
+                {
+                    yield return _host.StartCoroutine(TacticsTurn());
                     continue;
                 }
 
@@ -169,7 +261,7 @@ namespace BaseballProto.Core
                 }
                 else
                 {
-                    // 감독 결정은 AI 담당이라 여기 오지 않는다
+                    // 사람 감독은 작전만 걸어두고 교체는 AI라 감독 결정 대기는 오지 않는다
                     Message = "Unexpected pending: " + (pending == null ? "none" : pending.Kind.ToString());
                     yield return null;
                 }
@@ -193,9 +285,22 @@ namespace BaseballProto.Core
                 {
                     controllers.Assign(side, HumanPitchingDecision.Instance);
                 }
+
+                // 감독: 사람이 맡은 쪽 작전만 사람 (타격 모드 = 도루·번트, 투구 모드 = 고의4구). 교체는 AI
+                var manager = new HumanManagerDecision
+                {
+                    HumanOffenseTactics = Mode == DuelMode.Batting,
+                    HumanDefenseTactics = Mode == DuelMode.Pitching,
+                    SubstitutionsByAi = true,
+                };
+                _managers[(int)side] = manager;
+                controllers.Assign(side, manager);
             }
 
             _engine = new GameEngine(MatchFactory.Create(_gameCount, seed), _config, (ulong)seed, controllers);
+            ApplyRunStyle();
+            _readyConfirmed = false;
+            _atTactics = false;
             _restart = false;
             Stats.Reset();
             _statsIndex = 0;
@@ -205,12 +310,99 @@ namespace BaseballProto.Core
             Message = "Game " + _gameCount + " (seed " + seed + ")";
         }
 
+        // ───────────────────────── 작전 ─────────────────────────
+
+        /// <summary>
+        /// 사람 작전 결정 직전: 대결을 보여주고 START를 기다리며 작전 버튼을 받는다.
+        /// START 뒤 고른 작전을 사람 감독 대기열에 걸고 그 결정 지점 하나를 진행한다
+        /// </summary>
+        private IEnumerator TacticsTurn()
+        {
+            GameState state = _engine.State;
+            Player batter = _engine.Players.Get(state.CurrentBatterId);
+            Player pitcher = _engine.Players.Get(state.Defense.CurrentPitcherId);
+            Prepare(pitcher, batter, batter.BattingHandAgainst(pitcher.Throws));
+            _stealFrom = 0;
+            _intentionalWalk = false;
+            _atTactics = true;
+
+            // 번트 자세는 같은 타석 동안 유지 (새 타석이거나 2스트라이크면 해제)
+            if (_buntPlateAppearance != state.PlateAppearanceNumber || !CanBunt(_bunt == BuntType.None ? BuntType.ForHit : _bunt))
+            {
+                _bunt = BuntType.None;
+            }
+
+            yield return _host.StartCoroutine(WaitForReady());
+            _atTactics = false;
+            if (_restart)
+            {
+                yield break;
+            }
+
+            TeamSide side = Mode == DuelMode.Batting ? state.OffenseSide : state.DefenseSide;
+            HumanManagerDecision manager = _managers[(int)side];
+            manager.ClearQueue();
+            if (_stealFrom > 0)
+            {
+                manager.Queue(ManagerAction.Steal(_stealFrom));
+            }
+
+            if (_bunt != BuntType.None)
+            {
+                manager.Queue(ManagerAction.Bunt(_bunt));
+            }
+
+            if (_intentionalWalk)
+            {
+                manager.Queue(ManagerAction.IntentionalWalk());
+            }
+
+            int before = state.Log.Count;
+            _engine.Step();
+            UpdateStats();
+            _readyConfirmed = true;
+            bool walked = false;
+            for (int i = before; i < state.Log.Count; i++)
+            {
+                walked |= state.Log[i] is IntentionalWalkEvent;
+            }
+
+            if (walked)
+            {
+                // 고의4구로 타석이 끝났다: 다음 타석은 다시 START부터
+                _readyConfirmed = false;
+                ShowHeadline("INTENTIONAL WALK", _tuning.ResultHoldS);
+                yield return _host.StartCoroutine(Wait(_tuning.ResultHoldS));
+            }
+
+            _stealFrom = 0;
+            _intentionalWalk = false;
+        }
+
+        private void ApplyRunStyle()
+        {
+            if (_engine == null)
+            {
+                return;
+            }
+
+            // 타격 모드에서는 사람이 양 팀 공격을 맡으므로 두 팀 모두에. 투구 모드의 공격은 AI(보통)
+            BaserunningStyle style = Mode == DuelMode.Batting ? RunStyle : BaserunningStyle.Normal;
+            _engine.State.Away.BaserunningStyle = style;
+            _engine.State.Home.BaserunningStyle = style;
+        }
+
         // ───────────────────────── 타격 모드 ─────────────────────────
 
         private IEnumerator BattingTurn(BattingContext ctx)
         {
             Prepare(ctx.Pitcher, ctx.Batter, ctx.BattingHand);
-            yield return _host.StartCoroutine(WaitForReady());
+            if (!_readyConfirmed)
+            {
+                yield return _host.StartCoroutine(WaitForReady());
+            }
+
+            _readyConfirmed = false;
             if (_restart)
             {
                 yield break;
@@ -310,6 +502,13 @@ namespace BaseballProto.Core
                     SwingBias.Clear();
                 }
                 _bat.Swing(_tuning.SwingDurationS);
+                BuntType sign = _engine.State.BuntSign;
+                if (sign != BuntType.None)
+                {
+                    // 번트 사인: 스윙 입력이 번트가 된다 (지켜보면 그대로 볼/스트라이크).
+                    // 커서·타이밍 입력 품질은 타격과 같이 번트 결과 보정으로 (상한은 InputModifierConfig.MaxBunt*)
+                    action = BatterAction.Bunt(sign, LastBatting.Action.TimingQuality);
+                }
             }
             else
             {
@@ -342,7 +541,12 @@ namespace BaseballProto.Core
                 types.Add(rating.Type);
             }
 
-            yield return _host.StartCoroutine(WaitForReady());
+            if (!_readyConfirmed)
+            {
+                yield return _host.StartCoroutine(WaitForReady());
+            }
+
+            _readyConfirmed = false;
             if (_restart)
             {
                 yield break;

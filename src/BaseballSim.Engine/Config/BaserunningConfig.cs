@@ -41,6 +41,12 @@ namespace BaseballSim.Engine.Config
         /// <summary>주루 센스 1 표준편차당 필요 여유 시간 감소 (더 정확한 판단으로 공격적)</summary>
         public double InstinctMarginPerSdS { get; set; } = 0.05;
 
+        /// <summary>주루 성향 공격적: 필요 여유 시간 변화 (음수 = 더 빠듯해도 간다)</summary>
+        public double AggressiveMarginShiftS { get; set; } = -0.25;
+
+        /// <summary>주루 성향 신중: 필요 여유 시간 변화</summary>
+        public double CautiousMarginShiftS { get; set; } = 0.30;
+
         /// <summary>주루 센스 50 주자의 여유 시간 추정 오차 (표준편차)</summary>
         public double EstimateNoiseS { get; set; } = 0.35;
 

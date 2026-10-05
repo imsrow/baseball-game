@@ -39,9 +39,10 @@ namespace BaseballSim.Engine.Control
 
         public static BatterAction Swing(double? timingQuality = null) => new BatterAction(BatterActionType.Swing, timingQuality);
 
-        public static BatterAction Bunt(BuntType type = BuntType.None)
+        /// <param name="quality">사람 번트 입력 품질 (−1~+1, 커서·타이밍). null이면 보정 없음 (AI)</param>
+        public static BatterAction Bunt(BuntType type = BuntType.None, double? quality = null)
         {
-            return new BatterAction(BatterActionType.Bunt) { BuntType = type };
+            return new BatterAction(BatterActionType.Bunt, quality) { BuntType = type };
         }
     }
 }
