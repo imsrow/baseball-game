@@ -23,6 +23,7 @@ namespace BaseballProto.EditorTools
                 return;
             }
 
+            ProtoAssets.EnsureMaterial();
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             new GameObject("ProtoBootstrap").AddComponent<ProtoBootstrap>();

@@ -95,6 +95,18 @@ namespace BaseballProto.UI
             }
         }
 
+        /// <summary>WebGL 첫 탭 대기 화면 (첫 탭에서 오디오가 켜진다)</summary>
+        public void DrawStartOverlay()
+        {
+            EnsureStyles();
+            float w = UiScale.Width;
+            float h = UiScale.Height;
+            Fill(new Rect(0f, 0f, w, h), PanelColor);
+            Label(new Rect(0f, h * 0.40f, w, 90f), "TAP TO START", 60, _headline);
+            Label(new Rect(0f, h * 0.40f + 100f, w, 40f), "Sound starts after the first tap", 24, _center);
+            Label(new Rect(0f, h * 0.40f + 140f, w, 40f), "(iPhone silent switch mutes web audio)", 20, _center);
+        }
+
         private void DrawHint(Hud hud, float w, float h)
         {
             string hint;

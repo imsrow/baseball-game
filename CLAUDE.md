@@ -50,12 +50,19 @@
 
 - `dotnet build`, `dotnet test` (xUnit)
 - 하네스 (요청 시에만): `dotnet run -c Release --project tools/BaseballSim.Harness -- --seeds 1`
+- WebGL 빌드 (에디터를 닫고): `Unity.exe -batchmode -projectPath unity/BaseballProto -buildTarget WebGL -executeMethod BaseballProto.EditorTools.ProtoBuild.BuildWebGLBatch`
+  (에디터 메뉴 Baseball > Build WebGL도 같음). 결과물 `unity/BaseballProto/Builds/WebGL`
+- WebGL 배포: `powershell -ExecutionPolicy Bypass -File tools/deploy-webgl.ps1` → gh-pages 브랜치 → https://imsrow.github.io/baseball-game/
+  - Pages는 Content-Encoding 헤더를 못 붙여 Gzip + Decompression Fallback(JS 해제), 파일명 해시
+  - 템플릿 `Assets/WebGLTemplates/BaseballPWA`: iOS 홈 화면 메타, 네트워크 우선 서비스 워커, 렌더 배율 상한 2
+  - WebGL은 첫 탭 전 소리가 안 나므로 TAP TO START 후 시작. targetFrameRate는 −1(브라우저 rAF)
 - Unity 엔진 DLL 갱신: `powershell -ExecutionPolicy Bypass -File tools/sync-engine.ps1` (또는 에디터 메뉴 Baseball > Sync Engine DLL).
   엔진을 고치면 반드시 다시 실행. DLL은 git에 넣지 않는다
 
 ## Git
 
 - 작업은 main 브랜치에 커밋하고 푸시한다
+- WebGL 빌드 결과물은 main에 넣지 않고 gh-pages 브랜치에만 올린다 (GitHub Pages)
 
 ## 현재 상태
 

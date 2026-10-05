@@ -26,3 +26,6 @@ crashlytics-build.properties
 # 엔진 DLL은 tools/sync-engine.ps1로 빌드·복사한다 (원본은 src/BaseballSim.Engine)
 /Assets/Plugins/BaseballSim/
 /Assets/Plugins/BaseballSim.meta
+
+# WebGL 빌드 시 Burst가 만드는 생성물
+/Data/

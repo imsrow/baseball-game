@@ -39,11 +39,22 @@ namespace BaseballProto.Core
         private int _lastScreenWidth;
         private int _lastScreenHeight;
 
+        // WebGL(특히 iOS 사파리)은 첫 터치 전에 소리가 나지 않으므로 첫 탭을 받은 뒤 시작한다
+        private bool _awaitingStart;
+
         private void Awake()
         {
-            Application.targetFrameRate = _tuning.TargetFrameRate;
+            // WebGL은 브라우저 화면 갱신(requestAnimationFrame)에 맞추는 −1이 가장 매끄럽다 (아이폰 사파리 60Hz).
+            // 고정값을 주면 setTimeout 기반으로 바뀌어 프레임이 들쭉날쭉해진다
+            bool web = Application.platform == RuntimePlatform.WebGLPlayer;
+            Application.targetFrameRate = web ? -1 : _tuning.TargetFrameRate;
+            if (!web)
+            {
+                // WebGL은 브라우저가 방향 고정을 지원하지 않아 오류만 난다 (세로 고정은 매니페스트에서)
+                Screen.orientation = ScreenOrientation.Portrait;
+            }
+            _awaitingStart = web;
             QualitySettings.vSyncCount = 0;
-            Screen.orientation = ScreenOrientation.Portrait;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
             _config = new LeagueConfig();
@@ -83,7 +94,10 @@ namespace BaseballProto.Core
 
         private void Start()
         {
-            StartCoroutine(_duel.Run());
+            if (!_awaitingStart)
+            {
+                StartCoroutine(_duel.Run());
+            }
         }
 
         private void Update()
@@ -100,6 +114,12 @@ namespace BaseballProto.Core
             _hud.Layout();
             _events.Clear();
             _touch.Drain(_events);
+            if (_awaitingStart)
+            {
+                WaitForFirstTap();
+                return;
+            }
+
             int moveEvents = 0;
             Vector2 moveDelta = Vector2.zero;
             foreach (PointerEvent e in _events)
@@ -133,6 +153,20 @@ namespace BaseballProto.Core
             RecordCursor(moveEvents, moveDelta);
         }
 
+        private void WaitForFirstTap()
+        {
+            foreach (PointerEvent e in _events)
+            {
+                if (e.Phase == PointerPhase.Down || e.Phase == PointerPhase.SwingKey)
+                {
+                    // 이 탭(브라우저 사용자 제스처)에서 Unity가 오디오를 깨운다
+                    _awaitingStart = false;
+                    StartCoroutine(_duel.Run());
+                    return;
+                }
+            }
+        }
+
         private void RecordCursor(int moveEvents, Vector2 moveDelta)
         {
             if (!_trace.Enabled || _duel.Mode != DuelMode.Batting)
@@ -148,6 +182,12 @@ namespace BaseballProto.Core
 
         private void OnGUI()
         {
+            if (_awaitingStart)
+            {
+                _hudRenderer.DrawStartOverlay();
+                return;
+            }
+
             _hudRenderer.Draw(_hud, _touch.LastEventLagMs, _fps);
         }
 
