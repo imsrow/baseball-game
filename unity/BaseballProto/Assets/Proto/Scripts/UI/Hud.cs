@@ -330,8 +330,12 @@ namespace BaseballProto.UI
             }
 
             // 엔진 보정 상한: 캐주얼 손맛 실험용으로 기본값보다 훨씬 넓게
-            Row("Contact logit", "0.00", 0f, 3f, () => (float)m.MaxSwingContactLogitShift, v => m.MaxSwingContactLogitShift = v);
-            Row("Solid logit", "0.00", 0f, 3f, () => (float)m.MaxSwingSolidLogitShift, v => m.MaxSwingSolidLogitShift = v);
+            // 보상(+, 좋은 입력)과 벌칙(−, 나쁜 입력)을 따로
+            Row("Contact +bonus", "0.00", 0f, 3f, () => (float)m.MaxSwingContactLogitShift, v => m.MaxSwingContactLogitShift = v);
+            Row("Contact -penalty", "0.00", 0f, 3f, () => (float)m.MaxSwingContactLogitPenalty,
+                v => m.MaxSwingContactLogitPenalty = v);
+            Row("Solid +bonus", "0.00", 0f, 3f, () => (float)m.MaxSwingSolidLogitShift, v => m.MaxSwingSolidLogitShift = v);
+            Row("Solid -penalty", "0.00", 0f, 3f, () => (float)m.MaxSwingSolidLogitPenalty, v => m.MaxSwingSolidLogitPenalty = v);
             Row("Spray deg", "0.0", 0f, 45f, () => (float)m.MaxTimingSprayShiftDeg, v => m.MaxTimingSprayShiftDeg = v);
             Row("Launch deg", "0.0", 0f, 40f, () => (float)m.MaxCursorLaunchAngleShiftDeg, v => m.MaxCursorLaunchAngleShiftDeg = v);
             Row("Release sigma", "0.00", 0f, 1.5f, () => (float)m.MaxPitchExecutionSigmaLogShift,
@@ -408,6 +412,8 @@ namespace BaseballProto.UI
             // 타격 조작 상한은 Unity 기본값, 나머지는 엔진 기본값으로
             m.MaxSwingContactLogitShift = _tuning.SwingContactLogitCap;
             m.MaxSwingSolidLogitShift = _tuning.SwingSolidLogitCap;
+            m.MaxSwingContactLogitPenalty = _tuning.SwingContactLogitPenalty;
+            m.MaxSwingSolidLogitPenalty = _tuning.SwingSolidLogitPenalty;
             m.MaxTimingSprayShiftDeg = defaults.MaxTimingSprayShiftDeg;
             m.MaxCursorLaunchAngleShiftDeg = defaults.MaxCursorLaunchAngleShiftDeg;
             m.MaxPitchExecutionSigmaLogShift = defaults.MaxPitchExecutionSigmaLogShift;

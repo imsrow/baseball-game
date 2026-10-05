@@ -73,6 +73,8 @@ namespace BaseballProto.Core
             // 타격 조작 보정 상한은 Unity 기본값으로 (엔진 기본값은 하네스 기준이라 그대로 둔다)
             _config.InputModifier.MaxSwingContactLogitShift = _tuning.SwingContactLogitCap;
             _config.InputModifier.MaxSwingSolidLogitShift = _tuning.SwingSolidLogitCap;
+            _config.InputModifier.MaxSwingContactLogitPenalty = _tuning.SwingContactLogitPenalty;
+            _config.InputModifier.MaxSwingSolidLogitPenalty = _tuning.SwingSolidLogitPenalty;
             _clock = new PresentationClock();
 
             Camera camera = CreateCamera();

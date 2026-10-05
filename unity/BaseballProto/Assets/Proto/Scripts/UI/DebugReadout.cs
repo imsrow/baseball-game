@@ -25,6 +25,7 @@ namespace BaseballProto.UI
             if (duel.Mode == DuelMode.Batting)
             {
                 AddBatting(lines, duel.LastBatting, mod);
+                AddBias(lines, duel.SwingBias);
             }
             else
             {
@@ -60,8 +61,19 @@ namespace BaseballProto.UI
             double cv = a.CursorVerticalOffset ?? 0;
             lines.Add(F("-> TimingQuality {0:+0.00;-0.00}  Dir {1:+0.00;-0.00}  CursorV {2:+0.00;-0.00}", q, dir, cv));
             lines.Add(F("   contact {0:+0.00;-0.00} / solid {1:+0.00;-0.00} logit   pull {2:+0.0;-0.0} deg   LA {3:+0.0;-0.0} deg",
-                q * mod.MaxSwingContactLogitShift, q * mod.MaxSwingSolidLogitShift,
+                mod.SwingContactLogitShift(q), mod.SwingSolidLogitShift(q),
                 -dir * mod.MaxTimingSprayShiftDeg, -cv * mod.MaxCursorLaunchAngleShiftDeg));
+        }
+
+        private static void AddBias(List<string> lines, SwingBiasTracker bias)
+        {
+            if (bias.Count == 0)
+            {
+                return;
+            }
+
+            lines.Add(F("Last {0} swings avg: timing {1:+0;-0} ms  dz {2:+0.000;-0.000} m", bias.Count, bias.MeanTimingErrorMs,
+                bias.MeanCursorDz));
         }
 
         private static void AddPitching(List<string> lines, PitchJudgement j, PitchEvent ev, InputModifierConfig mod)

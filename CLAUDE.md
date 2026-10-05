@@ -50,7 +50,7 @@
 
 - `dotnet build`, `dotnet test` (xUnit)
 - 하네스 (요청 시에만): `dotnet run -c Release --project tools/BaseballSim.Harness -- --seeds 1`
-- 밸런스 비교 (사람처럼 던지기·치기 vs AI, 구역별 성적): `dotnet run -c Release --project tools/BaseballSim.BalanceProbe -- --games 2000 --scenarios a,b,f,g,h,i [--swing-caps 1.0]`
+- 밸런스 비교 (사람처럼 던지기·치기 vs AI, 구역별 성적): `dotnet run -c Release --project tools/BaseballSim.BalanceProbe -- --games 2000 --scenarios a,b,f,g,h,i [--swing-caps 1.0] [--swing-penalty 0.4]`
 - WebGL 빌드 (에디터를 닫고): `Unity.exe -batchmode -projectPath unity/BaseballProto -buildTarget WebGL -executeMethod BaseballProto.EditorTools.ProtoBuild.BuildWebGLBatch`
   (에디터 메뉴 Baseball > Build WebGL도 같음). 결과물 `unity/BaseballProto/Builds/WebGL`
 - WebGL 배포: `powershell -ExecutionPolicy Bypass -File tools/deploy-webgl.ps1` → gh-pages 브랜치 → https://imsrow.github.io/baseball-game/
@@ -71,7 +71,7 @@
   - A: 상태 머신, 투구 판정(실행·인지·스윙·컨택), 타구 생성·비행, 물리 기반 수비·주루, 기본 AI, 검증 하네스
   - B: 도루·번트·폭투·포일·낫아웃, 고의4구, 대타·대주자·대수비, 불펜 역할(마무리·셋업)
   - C: 직접↔시뮬 전환, 멈춤 조건, 사람 감독 흐름, 저장/불러오기
-- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 94개 통과
+- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 95개 통과
 - 투구 위치 효과: 구역(Heart/Shadow/Chase/Waste)별 정타 로그 오즈·타구속도 보정 (`BattedBallConfig.SolidLogitShiftByRegion`,
   `ExitVelocityKmhByRegion`), 전체 배율 `LeagueConfig.LocationEffectScale`(기본 1 = Statcast 근사, Unity TUNE에서 조절).
   Standard 프리셋 구역별 컨택률은 Heart 헛스윙 약 13%, Chase 약 47%로 조정. 목표: Heart 타율 .300·장타율 .550 근처, Chase 타율 .150 근처
@@ -110,8 +110,9 @@
   진행 중인 `SimulateUntil`/멈춤 조건. 불러온 뒤 담당 방식(`SavedGame.Modes`)대로 새 컨트롤러가 연결된다
 - 설정(LeagueConfig)이 바뀐 상태에서 불러오면 이어지는 결과가 달라질 수 있다 (`ConfigMatches` 확인)
 - 사람 입력 → 엔진 값 매핑은 Unity 쪽 `Assets/Proto/Scripts/Quality`에 있다. 계수는 `ProtoTuning`, 보정 상한은 `InputModifierConfig`
-- 타격 조작 보정 상한(컨택·정타)은 Unity 기본값 1.0(`ProtoTuning.SwingContactLogitCap`/`SwingSolidLogitCap`)을 시작 시 적용.
-  엔진 기본값 0.4는 하네스 기준이라 그대로 둔다
+- 타격 조작 보정 상한(컨택·정타)은 보상(+)·벌칙(−)이 따로다 (`InputModifierConfig.MaxSwing*LogitShift` / `MaxSwing*LogitPenalty`).
+  Unity 기본값 보상 1.0·벌칙 0.4(`ProtoTuning.SwingContactLogitCap`/`SwingSolidLogitCap`/`Swing*LogitPenalty`)를 시작 시 적용.
+  엔진 기본값은 둘 다 0.4(하네스 기준)라 그대로 둔다
 - 판정은 입력 이벤트 타임스탬프(`InputState.currentTime` 시간축) 기준. 프레임 시각으로 판정하지 않는다
 - 드래그 이동량은 EnhancedTouch `Touch.delta`를 쓰지 않고 손가락별 직전 위치 차이로 계산한다
   (`Touch.delta`는 프레임을 넘어가면 직전 기록 delta를 빼는 방식이라 1, −2, 3, −4…로 진동한다. 실기기도 동일)

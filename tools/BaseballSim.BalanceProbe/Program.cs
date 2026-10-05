@@ -23,6 +23,7 @@ namespace BaseballSim.BalanceProbe
             int games = DefaultGames;
             List<Scenario> scenarios = Enum.GetValues(typeof(Scenario)).Cast<Scenario>().ToList();
             double? swingCaps = null;
+            double? swingPenalty = null;
             double? locationScale = null;
 
             for (int i = 0; i < args.Length; i++)
@@ -40,6 +41,10 @@ namespace BaseballSim.BalanceProbe
                         break;
                     case "--swing-caps":
                         swingCaps = double.Parse(value, CultureInfo.InvariantCulture);
+                        i++;
+                        break;
+                    case "--swing-penalty":
+                        swingPenalty = double.Parse(value, CultureInfo.InvariantCulture);
                         i++;
                         break;
                     case "--location-scale":
@@ -61,6 +66,14 @@ namespace BaseballSim.BalanceProbe
                     config.InputModifier.MaxSwingSolidLogitShift = swingCaps.Value;
                 }
 
+                // 벌칙 상한을 따로 주지 않으면 보상 상한과 같게 (대칭)
+                double? penalty = swingPenalty ?? swingCaps;
+                if (penalty.HasValue)
+                {
+                    config.InputModifier.MaxSwingContactLogitPenalty = penalty.Value;
+                    config.InputModifier.MaxSwingSolidLogitPenalty = penalty.Value;
+                }
+
                 if (locationScale.HasValue)
                 {
                     config.LocationEffectScale = locationScale.Value;
@@ -71,8 +84,9 @@ namespace BaseballSim.BalanceProbe
 
             LeagueConfig shown = CreateConfig();
             Console.WriteLine(string.Format(CultureInfo.InvariantCulture,
-                "=== 밸런스 비교 | 시나리오당 {0}경기 | 평균(50) 능력치 팀 | swing caps {1} / {2} | location scale {3} ===",
-                games, shown.InputModifier.MaxSwingContactLogitShift, shown.InputModifier.MaxSwingSolidLogitShift,
+                "=== 밸런스 비교 | 시나리오당 {0}경기 | 평균(50) 능력치 팀 | swing caps +{1}/-{2} (contact) +{3}/-{4} (solid) | location scale {5} ===",
+                games, shown.InputModifier.MaxSwingContactLogitShift, shown.InputModifier.MaxSwingContactLogitPenalty,
+                shown.InputModifier.MaxSwingSolidLogitShift, shown.InputModifier.MaxSwingSolidLogitPenalty,
                 shown.LocationEffectScale));
             Console.WriteLine(ProbeStats.Header);
             foreach (Scenario scenario in scenarios)

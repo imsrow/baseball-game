@@ -71,11 +71,17 @@ namespace BaseballProto.Core
         public float LateCutoffMs = 120f;
 
         [Header("타격: 엔진 보정 상한 (Unity 기본값, 엔진 기본값 0.4와 별개)")]
-        /// <summary>타격 조작(TimingQuality ±1)이 컨택 로그 오즈에 주는 최대 보정. 손맛을 위해 엔진 기본보다 크게</summary>
+        /// <summary>좋은 입력(TimingQuality +1)이 컨택 로그 오즈에 주는 최대 보상. 손맛을 위해 엔진 기본보다 크게</summary>
         public float SwingContactLogitCap = 1.0f;
 
-        /// <summary>타격 조작(TimingQuality ±1)이 정타 로그 오즈에 주는 최대 보정</summary>
+        /// <summary>좋은 입력(TimingQuality +1)이 정타 로그 오즈에 주는 최대 보상</summary>
         public float SwingSolidLogitCap = 1.0f;
+
+        /// <summary>나쁜 입력(TimingQuality −1)이 컨택 로그 오즈에서 빼는 최대 벌칙. 빗맞을 때 헛스윙이 너무 많지 않게 작게</summary>
+        public float SwingContactLogitPenalty = 0.4f;
+
+        /// <summary>나쁜 입력(TimingQuality −1)이 정타 로그 오즈에서 빼는 최대 벌칙</summary>
+        public float SwingSolidLogitPenalty = 0.4f;
 
         [Header("타격: 품질 합산")]
         /// <summary>TimingQuality 가중 평균에서 타이밍 점수 비중 (커서 점수 비중 = 1 − 이 값)</summary>
@@ -96,6 +102,10 @@ namespace BaseballProto.Core
         public float CursorLimitXM = 0.5f;
         public float CursorMinZM = 0.25f;
         public float CursorMaxZM = 1.3f;
+
+        [Header("타격: 디버그")]
+        /// <summary>HUD 평균 타이밍·커서 오차를 낼 최근 스윙 개수 (쏠림 확인용)</summary>
+        public int SwingBiasWindow = 10;
 
         [Header("타격: 스윙 연출")]
         public float SwingDurationS = 0.18f;

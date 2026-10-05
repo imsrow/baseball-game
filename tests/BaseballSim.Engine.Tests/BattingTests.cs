@@ -4,6 +4,7 @@ using BaseballSim.Engine.Batting;
 using BaseballSim.Engine.Config;
 using BaseballSim.Engine.Pitching;
 using BaseballSim.Engine.Players;
+using BaseballSim.Engine.Probability;
 using BaseballSim.Engine.Randomness;
 using BaseballSim.Engine.Ratings;
 using Xunit;
@@ -56,6 +57,20 @@ namespace BaseballSim.Engine.Tests
             double max = resolver.ContactProbability(new BatterRatings(), Pitch(AttackRegion.Heart), 0, false, 1.0);
             double over = resolver.ContactProbability(new BatterRatings(), Pitch(AttackRegion.Heart), 0, false, 9.0);
             Assert.Equal(max, over, 12);
+        }
+
+        [Fact]
+        public void 컨택_타이밍입력_보상과_벌칙_상한은_따로()
+        {
+            LeagueConfig config = LeagueConfig.CreateDefault();
+            config.InputModifier.MaxSwingContactLogitShift = 1.0;
+            config.InputModifier.MaxSwingContactLogitPenalty = 0.4;
+            var resolver = new ContactResolver(config);
+            double neutral = resolver.ContactProbability(new BatterRatings(), Pitch(AttackRegion.Heart), 0, false, null);
+            double good = resolver.ContactProbability(new BatterRatings(), Pitch(AttackRegion.Heart), 0, false, 1.0);
+            double bad = resolver.ContactProbability(new BatterRatings(), Pitch(AttackRegion.Heart), 0, false, -1.0);
+            Assert.Equal(1.0, LogOdds.Logit(good) - LogOdds.Logit(neutral), 9);
+            Assert.Equal(-0.4, LogOdds.Logit(bad) - LogOdds.Logit(neutral), 9);
         }
 
         [Fact]

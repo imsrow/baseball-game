@@ -44,7 +44,7 @@ namespace BaseballSim.Engine.Batting
 
             if (timingQuality.HasValue)
             {
-                shift += Clamp(timingQuality.Value) * _config.InputModifier.MaxSwingContactLogitShift;
+                shift += _config.InputModifier.SwingContactLogitShift(timingQuality.Value);
             }
 
             return LogOdds.Shift(p, shift);
@@ -54,11 +54,6 @@ namespace BaseballSim.Engine.Batting
         public double FoulProbability(ExecutedPitch pitch)
         {
             return _config.Environment.FoulRateByRegion.Get(pitch.Region);
-        }
-
-        private static double Clamp(double quality)
-        {
-            return Math.Max(-1.0, Math.Min(1.0, quality));
         }
     }
 }

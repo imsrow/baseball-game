@@ -42,7 +42,7 @@ namespace BaseballSim.Engine.Batting
 
             if (timingQuality.HasValue)
             {
-                shift += Math.Max(-1.0, Math.Min(1.0, timingQuality.Value)) * _config.InputModifier.MaxSwingSolidLogitShift;
+                shift += _config.InputModifier.SwingSolidLogitShift(timingQuality.Value);
             }
 
             return LogOdds.Shift(p, shift);

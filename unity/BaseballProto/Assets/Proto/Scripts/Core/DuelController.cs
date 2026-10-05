@@ -62,6 +62,7 @@ namespace BaseballProto.Core
             _batting = batting;
             _pitching = pitching;
             _impact = impact;
+            SwingBias = new SwingBiasTracker(tuning.SwingBiasWindow);
         }
 
         public DuelMode Mode { get; private set; } = DuelMode.Batting;
@@ -76,6 +77,9 @@ namespace BaseballProto.Core
         public string Matchup { get; private set; } = string.Empty;
 
         public BattingJudgement LastBatting { get; private set; }
+
+        /// <summary>최근 스윙의 평균 타이밍·커서 오차 (경기가 바뀌어도 이어서 센다)</summary>
+        public SwingBiasTracker SwingBias { get; }
 
         public PitchJudgement LastPitching { get; private set; }
 
@@ -247,6 +251,7 @@ namespace BaseballProto.Core
             {
                 LastBatting = BattingQualityMapper.Judge(swing, trajectory.ArrivalTime, pitch.Actual, _tuning);
                 action = LastBatting.Action;
+                SwingBias.Add(LastBatting);
                 _bat.Swing(_tuning.SwingDurationS);
             }
             else
