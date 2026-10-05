@@ -194,7 +194,11 @@ namespace BaseballProto.Core
             _shake.Tick(dt);
             _bat.Tick(_clock.DeltaTime);
             _flight.Tick(_clock.DeltaTime);
-            UpdateCursor();
+
+            // 타구 카메라 중에는 존 네모·커서가 경기장 바닥에 떠 보이므로 숨긴다
+            bool ballCamView = _director.Camera.Active;
+            _field.SetZoneVisible(!ballCamView);
+            UpdateCursor(ballCamView);
             RecordCursor(moveEvents, moveDelta);
         }
 
@@ -294,10 +298,10 @@ namespace BaseballProto.Core
             _trace?.Dispose();
         }
 
-        private void UpdateCursor()
+        private void UpdateCursor(bool hidden)
         {
             bool tap = _batting.Mode == BattingControlMode.TapToSwing;
-            if (_duel.Mode != DuelMode.Batting || (tap && !_batting.HasTapMark))
+            if (hidden || _duel.Mode != DuelMode.Batting || (tap && !_batting.HasTapMark))
             {
                 _cursorRing.Hide();
                 return;

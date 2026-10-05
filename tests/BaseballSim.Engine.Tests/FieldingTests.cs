@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using BaseballSim.Engine.Batting;
 using BaseballSim.Engine.Config;
 using BaseballSim.Engine.Events;
@@ -140,6 +141,89 @@ namespace BaseballSim.Engine.Tests
 
             Assert.True(hits > 0);
             Assert.True(extraBase <= 0.1 * hits, $"장타 {extraBase} / 안타 {hits}");
+        }
+
+        /// <summary>
+        /// 주자 상황(8가지) × 아웃(0~2)별 땅볼: 이닝이 안 끝나면 포스 주자는 반드시 진루하거나 포스아웃,
+        /// 포스아웃은 포스 주자만, 병살은 1루 주자 2루 아웃 + 타자 1루 아웃
+        /// </summary>
+        [Fact]
+        public void 땅볼_포스_진루와_병살은_주자상황별로_맞다()
+        {
+            var field = new FieldGeometry(_config.Field);
+            var resolver = new FieldingResolver(_config, field);
+            var defense = DefensiveAlignment.Build(p => TestData.Hitter(100 + (int)p, p), field, _config);
+            var rng = new Pcg32Random(33);
+            int outsPerInning = _config.Rules.OutsPerHalfInning;
+            var seen = new HashSet<PlateAppearanceOutcome>();
+            for (int mask = 0; mask < 8; mask++)
+            {
+                for (int outs = 0; outs < outsPerInning; outs++)
+                {
+                    for (int i = 0; i < 300; i++)
+                    {
+                        var s = new PlaySituation
+                        {
+                            OutsBefore = outs,
+                            Batter = new RunnerProfile(1, new BatterRatings(), Hand.Right),
+                            Defense = defense,
+                        };
+                        for (int b = 0; b < 3; b++)
+                        {
+                            if ((mask & (1 << b)) != 0)
+                            {
+                                s.Runners[b] = new RunnerProfile(10 + b, new BatterRatings(), Hand.Right);
+                            }
+                        }
+
+                        var ball = new BattedBall
+                        {
+                            ExitVelocityKmh = rng.Range(60, 180),
+                            LaunchAngleDeg = rng.Range(-30, 9),
+                            SprayAngleDeg = rng.Range(-44, 44),
+                        };
+                        PlayResult r = resolver.Resolve(ball, s, rng);
+                        seen.Add(r.Outcome);
+                        bool inningOver = outs + r.OutsRecorded >= outsPerInning;
+                        string where = $"mask {mask} outs {outs} {r.Outcome}";
+
+                        for (int b = 1; b <= 3; b++)
+                        {
+                            RunnerProfile runner = s.RunnerOn(b);
+                            if (runner == null)
+                            {
+                                continue;
+                            }
+
+                            RunnerMovement m = r.Movements.Find(x => x.PlayerId == runner.PlayerId);
+                            Assert.NotNull(m);
+                            bool infieldPlay = r.FieldedBy.HasValue && !PositionInfo.IsOutfield(r.FieldedBy.Value);
+                            if (m.IsOut && m.FromBase > 0 && infieldPlay)
+                            {
+                                // 내야 땅볼 아웃은 포스아웃뿐 (다음 베이스에서). 외야로 빠진 땅볼은 추가 진루 중 송구 아웃이 있을 수 있다
+                                Assert.True(s.IsForced(b), where + ": 포스가 아닌 주자 아웃");
+                                Assert.Equal(b + 1, m.ToBase);
+                            }
+
+                            if (s.IsForced(b) && !inningOver)
+                            {
+                                Assert.True(m.IsOut || m.ToBase >= b + 1, where + $": {b}루 포스 주자가 진루하지 않음");
+                            }
+                        }
+
+                        if (r.Outcome == PlateAppearanceOutcome.GroundedIntoDoublePlay)
+                        {
+                            Assert.Equal(2, r.OutsRecorded);
+                            Assert.Contains(r.Movements, m => m.FromBase == 1 && m.ToBase == 2 && m.IsOut);
+                            Assert.Contains(r.Movements, m => m.FromBase == 0 && m.ToBase == 1 && m.IsOut);
+                        }
+                    }
+                }
+            }
+
+            Assert.Contains(PlateAppearanceOutcome.GroundedIntoDoublePlay, seen);
+            Assert.Contains(PlateAppearanceOutcome.FieldersChoice, seen);
+            Assert.Contains(PlateAppearanceOutcome.GroundOut, seen);
         }
 
         [Fact]

@@ -109,7 +109,7 @@ namespace BaseballProto.Core
         public float CursorPerfectRatio = 0.3f;
 
         /// <summary>커서 중심 거리/반지름이 이 이상이면 커서 점수 0</summary>
-        public float CursorZeroRatio = 1.2f;
+        public float CursorZeroRatio = 2.0f;
 
         /// <summary>드래그 감도 (화면 이동량 대비 커서 이동량 배율)</summary>
         public float DragSensitivity = 1.2f;

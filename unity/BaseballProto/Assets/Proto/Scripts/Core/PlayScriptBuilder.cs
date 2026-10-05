@@ -248,10 +248,25 @@ namespace BaseballProto.Core
             }
 
             // ── 주자 경로 ──
+            // 이 플레이로 이닝이 끝나면 (2아웃 뒤 세 번째 아웃) 엔진은 주자를 제자리로 기록한다.
+            // 실제로는 2아웃이면 타구 순간 모두 뛰므로, 세 번째 아웃 순간까지 다음 베이스로 달리게 한다
+            float inningOverAt = float.NaN;
+            if (ev.OutsAfter >= _config.Rules.OutsPerHalfInning)
+            {
+                inningOverAt = caughtOut ? fielded : 0f;
+                foreach (RunnerPlan plan in plans)
+                {
+                    if (plan.IsOut && !float.IsNaN(plan.OutTime))
+                    {
+                        inningOverAt = Mathf.Max(inningOverAt, plan.OutTime);
+                    }
+                }
+            }
+
             float lastRunner = 0f;
             foreach (RunnerPlan plan in plans)
             {
-                RunnerScript runner = BuildRunner(plan, ev, air, caughtOut, homeRun, fielded, batterSide);
+                RunnerScript runner = BuildRunner(plan, ev, air, caughtOut, homeRun, fielded, batterSide, inningOverAt);
                 script.Runners.Add(runner);
                 if (!homeRun)
                 {
@@ -451,7 +466,7 @@ namespace BaseballProto.Core
         // ───────────────────────── 주자 ─────────────────────────
 
         private RunnerScript BuildRunner(RunnerPlan plan, PitchEvent ev, bool air, bool caughtOut, bool homeRun, float fielded,
-            float batterSide)
+            float batterSide, float inningOverAt)
         {
             Vector3 start = plan.IsBatter ? new Vector3(batterSide * BatterBoxX, 0f, BatterBoxZ) : BasePoint(plan.From);
             var track = new MotionTrack(start);
@@ -467,6 +482,17 @@ namespace BaseballProto.Core
                 track.Add(track.MoveTo(stop, 0f, outAt + 0.3f, MotionEase.Accelerate));
                 runner.OutTime = outAt;
                 runner.HideTime = outAt + _t.RunnerHideDelayS;
+                return runner;
+            }
+
+            if (plan.To <= plan.From && !plan.IsOut && !plan.IsBatter && !float.IsNaN(inningOverAt))
+            {
+                // 세 번째 아웃으로 이닝 종료: 타구 순간 다음 베이스로 뛰다가 아웃 순간 멈추고 들어간다
+                float stopAt = Mathf.Max(inningOverAt, 0.5f);
+                float fraction = Mathf.Clamp(stopAt / Mathf.Max(0.1f, plan.Natural(plan.From + 1)), 0.1f, 0.95f);
+                Vector3 stop = Vector3.Lerp(start, BasePoint(plan.From + 1), fraction);
+                track.Add(track.MoveTo(stop, 0f, stopAt, MotionEase.Accelerate));
+                runner.HideTime = stopAt + _t.RunnerHideDelayS;
                 return runner;
             }
 

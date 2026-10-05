@@ -174,7 +174,7 @@ MonoBehaviour:
     LateCutoffMs: 120
     CursorRadiusM: 0.12
     CursorPerfectRatio: 0.3
-    CursorZeroRatio: 1.2
+    CursorZeroRatio: 2
     DragSensitivity: 1.2
     CursorLimitXM: 0.5
     CursorMinZM: 0.25

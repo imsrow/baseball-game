@@ -48,7 +48,9 @@
 
 ## 빌드·테스트
 
-- `dotnet build`, `dotnet test` (xUnit). 이 PC에는 .NET 10 런타임만 있어 테스트·도구 실행 시 `DOTNET_ROLL_FORWARD=Major` 필요
+- `dotnet build`, `dotnet test` (xUnit). 테스트는 엔진(`tests/BaseballSim.Engine.Tests`)과 인플레이 연출 대본(`tests/BaseballProto.PlayScript.Tests`:
+  Unity `Assets/Proto/Scripts/Core`의 대본 코드를 그대로 컴파일하고 UnityEngine은 `UnityEngineStub.cs`로 흉내. 대본 쪽 Unity 스크립트에
+  새 UnityEngine 타입을 쓰면 스텁에도 추가) 이 PC에는 .NET 10 런타임만 있어 테스트·도구 실행 시 `DOTNET_ROLL_FORWARD=Major` 필요
 - 하네스 (요청 시에만): `dotnet run -c Release --project tools/BaseballSim.Harness -- --seeds 1`
 - 밸런스 비교 (사람처럼 던지기·치기 vs AI, 구역별 성적): `dotnet run -c Release --project tools/BaseballSim.BalanceProbe -- --games 2000 --scenarios a,b,f,g,h,i [--swing-caps 1.0] [--swing-penalty 0.4] [--ev-la]`
   (`--ev-la`: 타구속도 × 발사각 구간별 타율·장타율 표, 강한 라이너 아웃의 비거리·체공·포구 수비수.
@@ -76,7 +78,7 @@
   - A: 상태 머신, 투구 판정(실행·인지·스윙·컨택), 타구 생성·비행, 물리 기반 수비·주루, 기본 AI, 검증 하네스
   - B: 도루·번트·폭투·포일·낫아웃, 고의4구, 대타·대주자·대수비, 불펜 역할(마무리·셋업)
   - C: 직접↔시뮬 전환, 멈춤 조건, 사람 감독 흐름, 저장/불러오기
-- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 100개 통과
+- 하네스(시드 1): 6개 목표 지표 모두 허용 범위 내. xUnit 테스트 106개 통과 (엔진 101, 연출 대본 5)
 - 타구 판정 조정 (2026-10-05, `--ev-la` 기준): 강한 라이너(161+, 10~25도) 아웃 31% → 21%, 약한 뜬공 역전 축소,
   강한 고각 타구에 펜스 앞 아웃. 방법:
   - 양력은 `BallPhysicsConfig.LiftStartDeg`(15도)부터 증가 → 라이너가 낮고 짧게 날아감
@@ -123,6 +125,9 @@
     카메라가 넘어간 뒤에만 보임
   - FX 패널: Ball cam 켜고 끄기, Play speed 1x/1.5x/2x(연출이 7초 넘으면 더 빨리), Auto play(사람 몫 스윙·투구도 AI, 다음 공 자동: 연출·프레임 확인용)
   - 연출 중 탭(또는 스페이스) = 결과로 바로. 결과 문구는 연출이 끝난 뒤
+  - 이닝을 끝내는 플레이(2아웃 뒤 땅볼·뜬공 아웃)는 엔진이 주자를 제자리로 기록한다(득점 무효라 결과는 맞음).
+    연출에서는 2아웃이면 타구 순간 모두 뛰므로 세 번째 아웃 순간까지 다음 베이스로 달리게 한다
+  - 타구 카메라 중에는 스트라이크 존 네모·커서·투구 위치 링을 숨긴다
   - 검증: 대본 불변식(공이 엔진 지점 통과, 아웃이면 공 먼저/세이프면 주자 먼저, 야수 속도)을 AI 1만여 타구로 확인했다 (Unity 밖에서 스텁으로 컴파일).
     시각 확인은 PlaySnapshots
 
@@ -140,12 +145,16 @@
 | Calib ms | 0 (기기 저장값 우선) | `DisplayLatencyMs`, 범위 −250~150 |
 | Cursor R m | 0.120 | 커서 반지름 |
 | Timing weight | 0.60 | 품질 합산에서 타이밍 비중 (커서 0.40) |
-| Cursor perfect / zero d/R | 0.30 / 1.20 | 커서 점수 1 / 0 경계 |
+| Cursor perfect / zero d/R | 0.30 / 2.00 | 커서 점수 1 / 0 경계 (zero는 2026-10-05 1.20 → 2.00, 터치 조작에서 거의 늘 0이라) |
 | Drag sens | 1.20 | |
 | Gauge period s | 1.10 | 투구 게이지 왕복 주기 |
 | 슬라이더 없음 | LateCutoff 120 ms, HoldTakeMargin 0.10 m, 그림자 켬, 보정 10스윙·300 ms 초과 제외, 평균 창 10스윙 | `ProtoTuning` |
 
 ## 나중에 할 일 (남은 이슈)
+
+- 타구 중 실시간 주루 버튼(프로야구9 방식: 타구를 보며 진루·귀루 지시). 엔진에 주루 결정 지점(`IBaserunningDecision`) 추가 필요
+- 내야안타가 현실보다 조금 많다 (2026-10-05 측정, Unity 경기 팀 2000경기: 땅볼 중 8.3%, 전체 안타 중 12.2% / 현실 대략 6.5~7%, 9%).
+  이날 수비 수정 전후 차이 없음 (8.4% → 8.3%)
 
 - 인플레이 연출 아이폰 실기기 FPS 미확인 (데스크톱 브라우저에서만 약 60 FPS 확인). FX의 Auto play를 켜고 디버그 표시의 FPS로 확인
 - 연출 미세 문제: 병살 중계 송구 실책 때 타자 주자가 공보다 늦게 2루에 도착해 보이는 경우가 드물게 있음 (1만 타구 중 4건)
@@ -193,6 +202,8 @@
 - 저장하지 않는 것(UI 쪽 상태): 컨트롤러 객체, `HumanManagerDecision`의 걸어둔 지시·교체 거절 기록,
   진행 중인 `SimulateUntil`/멈춤 조건. 불러온 뒤 담당 방식(`SavedGame.Modes`)대로 새 컨트롤러가 연결된다
 - 설정(LeagueConfig)이 바뀐 상태에서 불러오면 이어지는 결과가 달라질 수 있다 (`ConfigMatches` 확인)
+- `ProtoTuning` 값은 `Assets/Proto/Scenes/Duel.unity`의 ProtoBootstrap에 직렬화된 값이 코드 기본값보다 우선한다 (씬에 없는 새 필드만 코드 기본값).
+  코드 기본값을 바꾸면 씬의 `_tuning` 값도 같이 고친다. TUNE의 RESET은 코드 기본값으로 돌린다
 - 사람 입력 → 엔진 값 매핑은 Unity 쪽 `Assets/Proto/Scripts/Quality`에 있다. 계수는 `ProtoTuning`, 보정 상한은 `InputModifierConfig`
 - 타격 조작 보정 상한(컨택·정타)은 보상(+)·벌칙(−)이 따로다 (`InputModifierConfig.MaxSwing*LogitShift` / `MaxSwing*LogitPenalty`).
   Unity 기본값 보상 1.0·벌칙 0.4(`ProtoTuning.SwingContactLogitCap`/`SwingSolidLogitCap`/`Swing*LogitPenalty`)를 시작 시 적용.

@@ -528,6 +528,13 @@ namespace BaseballProto.Core
         private IEnumerator PlayBattedBall(PitchEvent ev, Vector3 contact)
         {
             PlayScript script = _director.Build(ev, contact, _field.BatterSide, _engine.Players);
+            if (_tuning.BallCam)
+            {
+                // 투구 위치 표시 링도 타구 카메라에서는 바닥에 떠 보인다
+                _actualRing.Hide();
+                _targetRing.Hide();
+            }
+
             _director.Begin(script);
             _skipRequested = false;
             CanSkip = true;

@@ -18,6 +18,7 @@ namespace BaseballProto.View
         private readonly ProtoTuning _tuning;
         private readonly GameObject _batter;
         private readonly GameObject _pitcher;
+        private readonly GameObject _zone;
 
         public FieldView(Transform root, Camera camera, StrikeZoneConfig zone, ProtoTuning tuning)
         {
@@ -34,7 +35,7 @@ namespace BaseballProto.View
             PrimitiveFactory.Create(PrimitiveType.Cube, "Plate", root, new Vector3(0f, 0f, -0.2f),
                 new Vector3(0.43f, 0.02f, 0.43f), ProtoColors.Chalk);
 
-            BuildZoneFrame(root, zone);
+            _zone = BuildZoneFrame(root, zone);
 
             _pitcher = PrimitiveFactory.Create(PrimitiveType.Cube, "Pitcher", root, new Vector3(0f, 0.95f, MoundDistanceM - 0.5f),
                 new Vector3(0.5f, 1.9f, 0.35f), ProtoColors.Pitcher);
@@ -87,7 +88,16 @@ namespace BaseballProto.View
             Camera.fieldOfView = Mathf.Max(_tuning.MinVerticalFovDeg, Mathf.Max(fromWidth, fromHeight));
         }
 
-        private static void BuildZoneFrame(Transform root, StrikeZoneConfig zone)
+        /// <summary>스트라이크 존 네모 표시 (타구 카메라에서는 경기장 바닥에 떠 보여 숨긴다)</summary>
+        public void SetZoneVisible(bool visible)
+        {
+            if (_zone.activeSelf != visible)
+            {
+                _zone.SetActive(visible);
+            }
+        }
+
+        private static GameObject BuildZoneFrame(Transform root, StrikeZoneConfig zone)
         {
             float w = (float)zone.HalfWidthM;
             float bottom = (float)zone.BottomM;
@@ -100,6 +110,7 @@ namespace BaseballProto.View
             Line(frame, new Vector3(0f, bottom, 0f), new Vector3(2f * w, LineThicknessM, LineThicknessM));
             Line(frame, new Vector3(-w, bottom + height * 0.5f, 0f), new Vector3(LineThicknessM, height, LineThicknessM));
             Line(frame, new Vector3(w, bottom + height * 0.5f, 0f), new Vector3(LineThicknessM, height, LineThicknessM));
+            return frame.gameObject;
         }
 
         private static void Line(Transform parent, Vector3 position, Vector3 scale)
